@@ -7,6 +7,12 @@ let userPresets = [];
 let blockedSites = [];
 let blockingMode = 'reason';
 
+const INITIALLY_UNLOCKED = ['dark'];
+let unlockedThemeIds = new Set(INITIALLY_UNLOCKED);
+let cooldownUntil = 0;
+let cooldownInterval = null;
+let selectedThemeId = null;
+
 const DEFAULT_BLOCKED_SITES = [
   { domain: 'youtube.com', enabled: true },
   { domain: 'instagram.com', enabled: true },
@@ -71,6 +77,8 @@ const els = {
   stopBtn: document.getElementById('stopBtn'),
   modeReason: document.getElementById('modeReason'),
   modeBlockBtn: document.getElementById('modeBlockBtn'),
+  themeGrid: document.getElementById('themeGrid'),
+  unlockBtn: document.getElementById('unlockBtn'),
 };
 
 function getParams() {
@@ -550,6 +558,123 @@ els.stopBtn.addEventListener('click', () => {
   els.timerDisplay.textContent = '00:00';
 });
 
+function renderThemes() {
+  els.themeGrid.innerHTML = "";
+  THEMES.forEach(theme => {
+    const isUnlocked = unlockedThemeIds.has(theme.id);
+    const btn = document.createElement("button");
+    btn.className = "theme-btn";
+    if (theme.id === selectedThemeId) btn.classList.add("active");
+    if (!isUnlocked) btn.classList.add("locked");
+
+    if (isUnlocked) {
+      const nameSpan = document.createElement("span");
+      nameSpan.textContent = theme.name;
+      btn.appendChild(nameSpan);
+
+      const swatch = document.createElement("div");
+      swatch.className = "swatch";
+      swatch.style.background = theme.color;
+      btn.appendChild(swatch);
+
+      btn.addEventListener("click", () => selectTheme(theme.id));
+    }
+
+    els.themeGrid.appendChild(btn);
+  });
+}
+
+function selectTheme(themeId) {
+  selectedThemeId = themeId;
+  applyThemeById(themeId);
+  renderThemes();
+  chrome.storage.local.set({ selectedTheme: themeId });
+}
+
+async function loadTheme() {
+  const result = await chrome.storage.local.get("selectedTheme");
+  selectedThemeId = result.selectedTheme || null;
+  if (selectedThemeId) {
+    applyThemeById(selectedThemeId);
+  }
+}
+
+async function loadThemeUnlocks() {
+  const result = await chrome.storage.local.get(["themeUnlocks", "selectedTheme"]);
+
+  if (result.themeUnlocks && result.themeUnlocks.length > 0) {
+    unlockedThemeIds = new Set(result.themeUnlocks);
+  } else {
+    const initial = new Set(INITIALLY_UNLOCKED);
+    if (result.selectedTheme) initial.add(result.selectedTheme);
+    unlockedThemeIds = initial;
+    await chrome.storage.local.set({ themeUnlocks: [...unlockedThemeIds] });
+  }
+
+  if (result.selectedTheme && !unlockedThemeIds.has(result.selectedTheme)) {
+    unlockedThemeIds.add(result.selectedTheme);
+    await chrome.storage.local.set({ themeUnlocks: [...unlockedThemeIds] });
+  }
+
+  const timeResult = await chrome.storage.local.get("nextUnlockTime");
+  cooldownUntil = timeResult.nextUnlockTime || 0;
+}
+
+function updateUnlockButton() {
+  const lockedCount = THEMES.length - unlockedThemeIds.size;
+  if (lockedCount === 0) {
+    els.unlockBtn.disabled = true;
+    els.unlockBtn.className = "unlock-btn all-unlocked";
+    els.unlockBtn.textContent = "All themes unlocked!";
+    if (cooldownInterval) {
+      clearInterval(cooldownInterval);
+      cooldownInterval = null;
+    }
+    return;
+  }
+
+  const remaining = cooldownUntil - Date.now();
+  if (remaining <= 0) {
+    els.unlockBtn.disabled = false;
+    els.unlockBtn.className = "unlock-btn";
+    els.unlockBtn.textContent = "Roll !";
+    if (cooldownInterval) {
+      clearInterval(cooldownInterval);
+      cooldownInterval = null;
+    }
+  } else {
+    els.unlockBtn.disabled = true;
+    els.unlockBtn.className = "unlock-btn";
+    els.unlockBtn.textContent = "Unlock in " + Math.ceil(remaining / 1000) + "s";
+  }
+}
+
+function startCooldown(seconds) {
+  cooldownUntil = Date.now() + seconds * 1000;
+  chrome.storage.local.set({ nextUnlockTime: cooldownUntil });
+  updateUnlockButton();
+  if (cooldownInterval) clearInterval(cooldownInterval);
+  cooldownInterval = setInterval(updateUnlockButton, 200);
+}
+
+function unlockRandomTheme() {
+  const lockedIds = THEMES.filter(t => !unlockedThemeIds.has(t.id)).map(t => t.id);
+  if (lockedIds.length === 0) {
+    updateUnlockButton();
+    return;
+  }
+
+  const randomId = lockedIds[Math.floor(Math.random() * lockedIds.length)];
+  unlockedThemeIds.add(randomId);
+  chrome.storage.local.set({ themeUnlocks: [...unlockedThemeIds] });
+
+  startCooldown(10);
+  renderThemes();
+  updateUnlockButton();
+}
+
+els.unlockBtn.addEventListener("click", unlockRandomTheme);
+
 chrome.runtime.onMessage.addListener((message) => {
   if (message.type === 'CAPTURE_ENDED') {
     resetTimer();
@@ -561,6 +686,10 @@ chrome.runtime.onMessage.addListener((message) => {
   await loadSettings();
   await loadBlockedSites();
   await loadBlockingMode();
+  await loadTheme();
+  await loadThemeUnlocks();
+  renderThemes();
+  updateUnlockButton();
 })();
 
 chrome.storage.local.get('userPresets', result => {

@@ -1,4 +1,8 @@
 (async function () {
+  chrome.storage.local.get("selectedTheme", function (result) {
+    if (result.selectedTheme && typeof applyThemeById === 'function')
+      applyThemeById(result.selectedTheme);
+  });
   const params = new URLSearchParams(location.search);
   const targetUrl = params.get('target');
   const tabId = parseInt(params.get('tabId'), 10);
