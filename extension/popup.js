@@ -630,7 +630,11 @@ function updateUnlockButton() {
   } else {
     els.unlockBtn.disabled = true;
     els.unlockBtn.className = "unlock-btn";
-    els.unlockBtn.textContent = "Roll in " + Math.ceil(remaining / 1000) + "s";
+    const totalSec = Math.ceil(remaining / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    els.unlockBtn.textContent = "Roll in " + String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
   }
 }
 
@@ -653,7 +657,7 @@ function unlockRandomTheme() {
   unlockedThemeIds.add(randomId);
   chrome.storage.local.set({ themeUnlocks: [...unlockedThemeIds] });
 
-  startCooldown(86400);
+  startCooldown(43200);
   renderThemes();
   updateUnlockButton();
 }
