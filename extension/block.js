@@ -2,24 +2,41 @@
   const params = new URLSearchParams(location.search);
   const targetUrl = params.get('target');
   const tabId = parseInt(params.get('tabId'), 10);
+  const mode = params.get('mode');
+
   const siteNameEl = document.getElementById('site-name');
   const reasonInput = document.getElementById('reason-input');
   const proceedBtn = document.getElementById('proceed-btn');
   const exportBtn = document.getElementById('export-btn');
   const entryCountEl = document.getElementById('entry-count');
 
-  const COUNTDOWN_SECONDS = 10;
+  const reasonUi = document.getElementById('reason-ui');
+  const blockedUi = document.getElementById('blocked-ui');
+  const blockedSiteName = document.getElementById('blocked-site-name');
+  const closeBtn = document.getElementById('close-btn');
 
+  var siteDisplay = 'a site';
   if (targetUrl) {
     try {
-      siteNameEl.textContent = new URL(targetUrl).hostname;
-    } catch (_) {
-      siteNameEl.textContent = 'this site';
-    }
-  } else {
-    siteNameEl.textContent = 'a site';
+      siteDisplay = new URL(targetUrl).hostname;
+    } catch (_) {}
+  }
+  siteNameEl.textContent = siteDisplay;
+  blockedSiteName.textContent = siteDisplay;
+
+  // ===== Block mode =====
+  if (mode === 'block') {
+    reasonUi.style.display = 'none';
+    blockedUi.style.display = 'block';
+
+    closeBtn.addEventListener('click', () => {
+      if (tabId) chrome.tabs.remove(tabId);
+    });
+    return;
   }
 
+  // ===== Reason mode (default) =====
+  const COUNTDOWN_SECONDS = 10;
   var countdown = COUNTDOWN_SECONDS;
 
   function tick() {

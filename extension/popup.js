@@ -5,6 +5,7 @@ let displayInterval = null;
 let displayEndTime = null;
 let userPresets = [];
 let blockedSites = [];
+let blockingMode = 'reason';
 
 const DEFAULT_BLOCKED_SITES = [
   { domain: 'youtube.com', enabled: true },
@@ -69,6 +70,8 @@ const els = {
   customMinutes: document.getElementById('customMinutes'),
   startBtn: document.getElementById('startBtn'),
   stopBtn: document.getElementById('stopBtn'),
+  modeReason: document.getElementById('modeReason'),
+  modeBlockBtn: document.getElementById('modeBlockBtn'),
 };
 
 function getParams() {
@@ -316,9 +319,6 @@ function applyBlocking() {
     .filter(site => site.enabled)
     .map(site => site.domain);
   chrome.runtime.sendMessage({ type: 'SET_BLOCKED_DOMAINS', domains: enabledDomains });
-  if (enabledDomains.length > 0) {
-    chrome.runtime.sendMessage({ type: 'CLOSE_EXISTING_TABS' });
-  }
 }
 
 function renderBlockedSites() {
@@ -397,6 +397,22 @@ async function loadBlockedSites() {
   if (els.blockEnabled.checked) applyBlocking();
 }
 
+function updateModeUI() {
+  els.modeReason.classList.toggle('active', blockingMode === 'reason');
+  els.modeBlockBtn.classList.toggle('active', blockingMode === 'complete');
+}
+
+async function loadBlockingMode() {
+  return new Promise(resolve => {
+    chrome.runtime.sendMessage({ type: 'GET_BLOCKER_STATE' }, (response) => {
+      if (response) {
+        blockingMode = response.blockingMode || 'reason';
+      }
+      updateModeUI();
+      resolve();
+    });
+  });
+}
 
 els.captureBtn.addEventListener('click', async () => {
   if (isCapturing) {
@@ -488,6 +504,18 @@ els.newSiteInput.addEventListener('keydown', (e) => {
 
 els.addSiteBtn.addEventListener('click', addBlockedSite);
 
+els.modeReason.addEventListener('click', () => {
+  blockingMode = 'reason';
+  chrome.runtime.sendMessage({ type: 'SET_BLOCKING_MODE', mode: 'reason' });
+  updateModeUI();
+});
+
+els.modeBlockBtn.addEventListener('click', () => {
+  blockingMode = 'complete';
+  chrome.runtime.sendMessage({ type: 'SET_BLOCKING_MODE', mode: 'complete' });
+  updateModeUI();
+});
+
 els.presetBtns.forEach(btn => {
   btn.addEventListener('click', () => {
     if (!isCapturing) return;
@@ -536,6 +564,7 @@ chrome.runtime.onMessage.addListener((message) => {
 (async () => {
   await loadSettings();
   await loadBlockedSites();
+  await loadBlockingMode();
 })();
 
 chrome.storage.local.get('userPresets', result => {

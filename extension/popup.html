@@ -244,6 +244,30 @@
       cursor: pointer;
     }
 
+    .mode-toggle {
+      display: flex;
+      background: #383838;
+      border-radius: 6px;
+      padding: 2px;
+      margin-bottom: 12px;
+    }
+    .mode-toggle button {
+      flex: 1;
+      padding: 6px;
+      border: none;
+      background: transparent;
+      color: #888;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: all 0.15s;
+    }
+    .mode-toggle button.active {
+      background: #555;
+      color: #e0e0e0;
+    }
+
     .block-site-row {
       display: flex;
       align-items: center;
@@ -362,7 +386,7 @@
       margin: 0;
     }
     #customMinutes { -moz-appearance: textfield; }
-</style>
+  </style>
 </head>
 <body>
   <input type="radio" name="tab" id="tabTimer" checked>
@@ -375,7 +399,7 @@
   <div class="tab-bar">
     <label for="tabTimer" class="tab-label">Timer</label>
     <label for="tabModulation" class="tab-label">Modulation</label>
-    <label for="tabBlock" class="tab-label">Reasons</label>
+    <label for="tabBlock" class="tab-label">Blocking</label>
   </div>
 
   <div id="controls" class="controls">
@@ -503,6 +527,10 @@
         <input type="checkbox" id="blockEnabled">
         Blocking Active
       </label>
+      <div class="mode-toggle">
+        <button id="modeReason" class="active">Reason</button>
+        <button id="modeBlockBtn">Complete Block</button>
+      </div>
       <div id="blockedSiteList"></div>
       <div class="add-site-row">
         <input type="text" id="newSiteInput" placeholder="example.com">

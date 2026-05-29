@@ -2,21 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Why are you here?</title>
+  <title>Blocked</title>
   <link rel="stylesheet" href="block.css">
 </head>
 <body>
   <div class="container">
-    <p class="subtitle">You're about to visit <strong id="site-name"></strong></p>
-    <p class="question">Why do you need to open this site?</p>
-    <textarea id="reason-input" placeholder="Enter your reason..." rows="4"></textarea>
-    <button id="proceed-btn" disabled>Loading...</button>
-    <div class="actions">
-      <button id="export-btn">Export CSV</button>
-      <span id="entry-count"></span>
+    <div id="reason-ui">
+      <p class="subtitle">You're about to visit <strong id="site-name"></strong></p>
+      <p class="question">Why do you need to open this site?</p>
+      <textarea id="reason-input" placeholder="Enter your reason..." rows="4"></textarea>
+      <button id="proceed-btn" disabled>Loading...</button>
+      <div class="actions">
+        <button id="export-btn">Export CSV</button>
+        <span id="entry-count"></span>
+      </div>
+    </div>
+    <div id="blocked-ui" style="display:none">
+      <p class="blocked-title">Site Blocked</p>
+      <p class="subtitle"><strong id="blocked-site-name"></strong> is blocked</p>
+      <button id="close-btn">Close Tab</button>
     </div>
   </div>
-  <script src="config.js"></script>
   <script src="block.js"></script>
 </body>
 </html>

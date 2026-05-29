@@ -2,14 +2,6 @@
 
 const OFFSCREEN_URL = chrome.runtime.getURL('offscreen.html');
 let capturedTabId = null;
-let blockedDomains = [];
-
-function isBlockedDomain(url) {
-  try {
-    const hostname = new URL(url).hostname.replace(/^www\./, '');
-    return blockedDomains.some(d => hostname === d || hostname.endsWith('.' + d));
-  } catch { return false; }
-}
 
 async function loadState() {
   const result = await chrome.storage.local.get('capturedTabId');
@@ -59,9 +51,16 @@ function sendMessageToOffscreen(data) {
   return chrome.runtime.sendMessage(data);
 }
 
-loadState();
-
 // ==================== Site Reason Blocker Section ====================
+
+let blockedDomains = [];
+let blockingMode = 'reason';
+
+async function loadBlockerState() {
+  const result = await chrome.storage.local.get(['blockedDomains', 'blockingMode']);
+  if (result.blockedDomains) blockedDomains = result.blockedDomains;
+  if (result.blockingMode) blockingMode = result.blockingMode;
+}
 
 chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
   if (details.frameId !== 0) return;
@@ -81,8 +80,9 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
       return;
     }
 
+    const mode = blockingMode === 'complete' ? '&mode=block' : '';
     const blockUrl = chrome.runtime.getURL('block.html')
-      + `?target=${encodeURIComponent(details.url)}&tabId=${details.tabId}`;
+      + `?target=${encodeURIComponent(details.url)}&tabId=${details.tabId}${mode}`;
     chrome.tabs.update(details.tabId, { url: blockUrl });
   } catch (e) {
     // Invalid URL — skip
@@ -198,7 +198,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'SET_BLOCKED_DOMAINS') {
     blockedDomains = message.domains;
+    chrome.storage.local.set({ blockedDomains });
     sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === 'SET_BLOCKING_MODE') {
+    blockingMode = message.mode;
+    chrome.storage.local.set({ blockingMode });
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === 'GET_BLOCKER_STATE') {
+    sendResponse({ blockedDomains, blockingMode });
     return true;
   }
 });
@@ -235,3 +248,8 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     chrome.runtime.sendMessage({ type: 'CAPTURE_ENDED' }).catch(() => {});
   }
 });
+
+// ==================== Startup ====================
+
+loadState();
+loadBlockerState();
