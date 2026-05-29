@@ -622,7 +622,7 @@ function updateUnlockButton() {
   if (remaining <= 0) {
     els.unlockBtn.disabled = false;
     els.unlockBtn.className = "unlock-btn";
-    els.unlockBtn.textContent = "Roll !";
+    els.unlockBtn.textContent = "Roll!";
     if (cooldownInterval) {
       clearInterval(cooldownInterval);
       cooldownInterval = null;
