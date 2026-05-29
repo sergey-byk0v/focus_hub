@@ -1,4 +1,4 @@
-(async function () {
+(function () {
   const params = new URLSearchParams(location.search);
   const targetUrl = params.get('target');
   const tabId = parseInt(params.get('tabId'), 10);
@@ -7,14 +7,6 @@
   const proceedBtn = document.getElementById('proceed-btn');
   const exportBtn = document.getElementById('export-btn');
   const entryCountEl = document.getElementById('entry-count');
-
-  const DEFAULT_REASON_SETTINGS = {
-    enabled: true,
-    sites: ["youtube.com", "twitch.tv"],
-    countdownSeconds: 10
-  };
-  const { reasonSettings } = await chrome.storage.local.get({ reasonSettings: DEFAULT_REASON_SETTINGS });
-  const COUNTDOWN_SECONDS = reasonSettings.countdownSeconds || 0;
 
   if (targetUrl) {
     try {
