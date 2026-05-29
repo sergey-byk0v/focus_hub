@@ -36,7 +36,6 @@ const els = {
   controls: document.getElementById('controls'),
   frequency: document.getElementById('frequency'),
   depth: document.getElementById('depth'),
-  waveform: document.getElementById('waveform'),
   freqValue: document.getElementById('freqValue'),
   depthValue: document.getElementById('depthValue'),
   freqDown: document.getElementById('freqDown'),
@@ -78,7 +77,7 @@ function getParams() {
   return {
     frequency: parseFloat(els.frequency.value),
     depth: parseInt(els.depth.value) / 100,
-    waveform: els.waveform.value,
+    waveform: 'sine',
     spatialEnabled: els.spatialEnabled.checked,
     spatialSpeed: parseFloat(els.spatialSpeed.value),
     spatialWidth: parseInt(els.spatialWidth.value) / 100,
@@ -128,7 +127,6 @@ function applyPreset(preset) {
   const p = preset.params;
   els.frequency.value = p.frequency;
   els.depth.value = p.depth * 100;
-  els.waveform.value = p.waveform;
   els.spatialEnabled.checked = p.spatialEnabled;
   els.spatialSpeed.value = p.spatialSpeed;
   els.spatialWidth.value = p.spatialWidth * 100;
@@ -212,7 +210,7 @@ async function saveSettings() {
   const settings = {
     frequency: els.frequency.value,
     depth: els.depth.value,
-    waveform: els.waveform.value,
+    waveform: 'sine',
     spatialEnabled: els.spatialEnabled.checked,
     spatialSpeed: els.spatialSpeed.value,
     spatialWidth: els.spatialWidth.value,
@@ -232,7 +230,6 @@ async function loadSettings() {
     const s = result.settings;
     els.frequency.value = s.frequency || 16;
     els.depth.value = s.depth || 50;
-    els.waveform.value = s.waveform || 'sine';
     els.spatialEnabled.checked = s.spatialEnabled || false;
     els.spatialSpeed.value = s.spatialSpeed || 0.3;
     els.spatialWidth.value = s.spatialWidth || 70;
@@ -445,7 +442,6 @@ els.captureBtn.addEventListener('click', async () => {
 
 els.frequency.addEventListener('input', () => { updateDisplay(); sendParams(); });
 els.depth.addEventListener('input', () => { updateDisplay(); sendParams(); });
-els.waveform.addEventListener('change', () => sendParams());
 
 els.freqDown.addEventListener('click', () => {
   const current = parseFloat(els.frequency.value);
