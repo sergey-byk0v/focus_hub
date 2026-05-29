@@ -1,4 +1,4 @@
-(function () {
+(async function () {
   const params = new URLSearchParams(location.search);
   const targetUrl = params.get('target');
   const tabId = parseInt(params.get('tabId'), 10);
@@ -7,6 +7,8 @@
   const proceedBtn = document.getElementById('proceed-btn');
   const exportBtn = document.getElementById('export-btn');
   const entryCountEl = document.getElementById('entry-count');
+
+  const COUNTDOWN_SECONDS = 10;
 
   if (targetUrl) {
     try {
