@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Why are you here?</title>
+  <link rel="stylesheet" href="block.css">
+</head>
+<body>
+  <div class="container">
+    <div class="icon">&#9888;</div>
+    <h1>Hold on</h1>
+    <p class="subtitle">You're about to visit <strong id="site-name"></strong></p>
+    <p class="question">Why do you need to open this site?</p>
+    <textarea id="reason-input" placeholder="Enter your reason..." rows="4"></textarea>
+    <button id="proceed-btn" disabled>Loading...</button>
+    <div class="actions">
+      <button id="export-btn">Export CSV</button>
+      <span id="entry-count"></span>
+    </div>
+  </div>
+  <script src="config.js"></script>
+  <script src="block.js"></script>
+</body>
+</html>

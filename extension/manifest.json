@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Site Reason Blocker",
+  "version": "1.0.0",
+  "description": "Prompts for a reason before visiting distracting sites",
+  "permissions": [
+    "webNavigation",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://youtube.com/*",
+    "*://*.youtube.com/*",
+    "*://twitch.tv/*",
+    "*://*.twitch.tv/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Site Reason Blocker"
+  }
+}
