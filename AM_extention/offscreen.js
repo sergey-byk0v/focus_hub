@@ -7,6 +7,16 @@ let spatialPanner = null;
 let spatialLFO = null;
 let spatialWidthGain = null;
 let currentStream = null;
+let lowPass = null;
+let highPass = null;
+let dryGain = null;
+let summer = null;
+let crossoverEnabled = false;
+let pinkNoiseSource = null;
+let pinkNoiseGain = null;
+let pinkNoiseBuffer = null;
+let pinkNoiseModScale = null;
+let currentNoiseType = 'pink';
 
 const DEFAULT_PARAMS = {
   frequency: 16,
@@ -14,10 +24,69 @@ const DEFAULT_PARAMS = {
   waveform: 'sine',
   spatialEnabled: false,
   spatialSpeed: 0.3,
-  spatialWidth: 0.7
+  spatialWidth: 0.7,
+  crossoverEnabled: false,
+  crossoverFreq: 300,
+  pinkNoiseEnabled: false,
+  pinkNoiseMix: 0.03,
+  pinkNoiseModulate: false,
+  noiseType: 'pink'
 };
 
 let params = { ...DEFAULT_PARAMS };
+
+function generateWhiteNoise(numSamples) {
+  const data = new Float32Array(numSamples);
+  for (let i = 0; i < numSamples; i++) {
+    data[i] = Math.random() * 2 - 1;
+  }
+  return data;
+}
+
+function generatePinkNoise(numSamples) {
+  const data = new Float32Array(numSamples);
+  let white, pink;
+  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+
+  for (let i = 0; i < numSamples; i++) {
+    white = Math.random() * 2 - 1;
+    b0 = 0.99886 * b0 + white * 0.0555179;
+    b1 = 0.99332 * b1 + white * 0.0750759;
+    b2 = 0.96900 * b2 + white * 0.1538520;
+    b3 = 0.86650 * b3 + white * 0.3104856;
+    b4 = 0.55000 * b4 + white * 0.5329522;
+    b5 = -0.7616 * b5 - white * 0.0168980;
+    pink = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+    b6 = white * 0.115926;
+    data[i] = pink;
+  }
+  return data;
+}
+
+function generateBrownNoise(numSamples) {
+  const data = new Float32Array(numSamples);
+  let last = 0;
+  let max = 0;
+  for (let i = 0; i < numSamples; i++) {
+    const white = Math.random() * 2 - 1;
+    last = (last + white * 0.15) * 0.98;
+    if (Math.abs(last) > max) max = Math.abs(last);
+    data[i] = last;
+  }
+  if (max > 0) {
+    for (let i = 0; i < numSamples; i++) data[i] /= max;
+  }
+  return data;
+}
+
+function generateGrayNoise(numSamples) {
+  const pink = generatePinkNoise(numSamples);
+  const data = new Float32Array(numSamples);
+  for (let i = 0; i < numSamples; i++) {
+    data[i] = pink[i] * 0.6 + (Math.random() * 2 - 1) * 0.4;
+  }
+  return data;
+}
 
 function createAudioGraph() {
   if (audioCtx) return;
@@ -35,13 +104,111 @@ function createAudioGraph() {
   spatialWidthGain = audioCtx.createGain();
   spatialWidthGain.gain.value = 0.0;
 
-  carrierGain.connect(spatialPanner);
+  lowPass = audioCtx.createBiquadFilter();
+  lowPass.type = 'lowpass';
+  lowPass.frequency.value = params.crossoverFreq;
+  lowPass.Q.value = 0.5;
+
+  highPass = audioCtx.createBiquadFilter();
+  highPass.type = 'highpass';
+  highPass.frequency.value = params.crossoverFreq;
+  highPass.Q.value = 0.5;
+
+  dryGain = audioCtx.createGain();
+  dryGain.gain.value = 1.0;
+
+  summer = audioCtx.createGain();
+  summer.gain.value = 1.0;
+
+  pinkNoiseGain = audioCtx.createGain();
+  pinkNoiseGain.gain.value = 0.0;
+
+  pinkNoiseModScale = audioCtx.createGain();
+  pinkNoiseModScale.gain.value = 0;
+
   spatialPanner.connect(audioCtx.destination);
-
   modGain.connect(carrierGain.gain);
+  modGain.connect(pinkNoiseModScale);
+  pinkNoiseModScale.connect(pinkNoiseGain.gain);
   spatialWidthGain.connect(spatialPanner.pan);
+  pinkNoiseGain.connect(spatialPanner);
 
+  pinkNoiseBuffer = null;
 }
+
+function rewireGraph() {
+  if (!sourceNode) return;
+
+  sourceNode.disconnect();
+  lowPass.disconnect();
+  highPass.disconnect();
+  dryGain.disconnect();
+  summer.disconnect();
+  carrierGain.disconnect();
+
+  if (crossoverEnabled) {
+    sourceNode.connect(lowPass);
+    sourceNode.connect(highPass);
+    lowPass.connect(carrierGain);
+    highPass.connect(dryGain);
+    carrierGain.connect(summer);
+    dryGain.connect(summer);
+    summer.connect(spatialPanner);
+  } else {
+    sourceNode.connect(carrierGain);
+    carrierGain.connect(spatialPanner);
+  }
+}
+
+function generateNoiseBuffer() {
+  const sampleRate = audioCtx.sampleRate;
+  const numSamples = sampleRate * 10;
+  let data;
+
+  switch (params.noiseType) {
+    case 'white': data = generateWhiteNoise(numSamples); break;
+    case 'pink':  data = generatePinkNoise(numSamples); break;
+    case 'brown': data = generateBrownNoise(numSamples); break;
+    case 'gray':  data = generateGrayNoise(numSamples); break;
+    default:      data = generatePinkNoise(numSamples);
+  }
+
+  pinkNoiseBuffer = audioCtx.createBuffer(1, numSamples, sampleRate);
+  pinkNoiseBuffer.getChannelData(0).set(data);
+  currentNoiseType = params.noiseType;
+}
+
+function startPinkNoise() {
+  if (!audioCtx) return;
+
+  if (pinkNoiseSource) {
+    pinkNoiseSource.disconnect();
+    pinkNoiseSource = null;
+  }
+
+  if (!pinkNoiseBuffer || currentNoiseType !== params.noiseType) {
+    generateNoiseBuffer();
+  }
+
+  pinkNoiseSource = audioCtx.createBufferSource();
+  pinkNoiseSource.buffer = pinkNoiseBuffer;
+  pinkNoiseSource.loop = true;
+  pinkNoiseSource.connect(pinkNoiseGain);
+  pinkNoiseGain.gain.setTargetAtTime(params.pinkNoiseMix, audioCtx.currentTime, 0.01);
+  pinkNoiseSource.start();
+}
+
+function stopPinkNoise() {
+  if (pinkNoiseSource) {
+    pinkNoiseSource.stop();
+    pinkNoiseSource.disconnect();
+    pinkNoiseSource = null;
+  }
+  if (pinkNoiseGain) {
+    pinkNoiseGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.01);
+  }
+}
+
 async function startFromStreamId(streamId) {
   createAudioGraph();
 
@@ -69,10 +236,14 @@ async function startFromStreamId(streamId) {
 
   currentStream = media;
   sourceNode = audioCtx.createMediaStreamSource(media);
-  sourceNode.connect(carrierGain);
+  rewireGraph();
 
   startModulator();
   startSpatialLFO();
+
+  if (params.pinkNoiseEnabled) {
+    startPinkNoise();
+  }
 }
 
 function startModulator() {
@@ -107,6 +278,10 @@ function startSpatialLFO() {
 }
 
 function updateParams(newParams) {
+  const prevCrossover = params.crossoverEnabled;
+  const prevSpatial = params.spatialEnabled;
+  const prevPinkNoise = params.pinkNoiseEnabled;
+  const prevNoiseType = params.noiseType;
   Object.assign(params, newParams);
 
   if (audioCtx && modOscillator) {
@@ -124,10 +299,50 @@ function updateParams(newParams) {
     } else {
       spatialWidthGain.gain.setTargetAtTime(0.0, audioCtx.currentTime, 0.01);
     }
+
+    if (params.spatialEnabled !== prevSpatial) {
+      if (params.spatialEnabled) {
+        startSpatialLFO();
+      } else if (spatialLFO) {
+        spatialLFO.stop();
+        spatialLFO.disconnect();
+        spatialLFO = null;
+      }
+    }
+
+    if (params.crossoverEnabled !== prevCrossover) {
+      crossoverEnabled = params.crossoverEnabled;
+      rewireGraph();
+    }
+
+    if (audioCtx && lowPass) {
+      lowPass.frequency.setTargetAtTime(params.crossoverFreq, audioCtx.currentTime, 0.01);
+      highPass.frequency.setTargetAtTime(params.crossoverFreq, audioCtx.currentTime, 0.01);
+    }
+
+    if (params.pinkNoiseEnabled !== prevPinkNoise) {
+      if (params.pinkNoiseEnabled) {
+        startPinkNoise();
+      } else {
+        stopPinkNoise();
+      }
+    } else if (pinkNoiseGain) {
+      if (params.noiseType !== prevNoiseType && params.pinkNoiseEnabled) {
+        stopPinkNoise();
+        startPinkNoise();
+      } else {
+        pinkNoiseGain.gain.setTargetAtTime(params.pinkNoiseEnabled ? params.pinkNoiseMix : 0, audioCtx.currentTime, 0.01);
+        if (pinkNoiseModScale) {
+          const target = params.pinkNoiseEnabled && params.pinkNoiseModulate ? params.pinkNoiseMix : 0;
+          pinkNoiseModScale.gain.setTargetAtTime(target, audioCtx.currentTime, 0.01);
+        }
+      }
+    }
   }
 }
 
 function stop() {
+  stopPinkNoise();
   if (sourceNode) {
     sourceNode.disconnect();
     sourceNode = null;

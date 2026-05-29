@@ -1,5 +1,13 @@
 const OFFSCREEN_URL = chrome.runtime.getURL('offscreen.html');
 let capturedTabId = null;
+let blockedDomains = [];
+
+function isDomainBlocked(url) {
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, '');
+    return blockedDomains.some(d => hostname === d || hostname.endsWith('.' + d));
+  } catch { return false; }
+}
 
 async function loadState() {
   const result = await chrome.storage.local.get('capturedTabId');
@@ -107,6 +115,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })();
     return true;
   }
+
   if (message.type === 'START_COUNTDOWN') {
     (async () => {
       const endTime = Date.now() + (message.seconds * 1000);
@@ -159,6 +168,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'SET_BLOCKED_DOMAINS') {
+    blockedDomains = message.domains;
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === 'CLOSE_EXISTING_TABS') {
+    chrome.tabs.query({}, tabs => {
+      for (const tab of tabs) {
+        if (tab.url && isDomainBlocked(tab.url)) {
+          chrome.tabs.remove(tab.id);
+        }
+      }
+      sendResponse({ success: true });
+    });
+  }
 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
@@ -187,5 +212,11 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     closeOffscreen();
     clearState();
     chrome.runtime.sendMessage({ type: 'CAPTURE_ENDED' }).catch(() => {});
+  }
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.url && isDomainBlocked(changeInfo.url)) {
+    chrome.tabs.remove(tabId);
   }
 });

@@ -3,6 +3,31 @@ let currentTabId = null;
 let currentTabTitle = '';
 let displayInterval = null;
 let displayEndTime = null;
+let userPresets = [];
+let blockedSites = [];
+
+const DEFAULT_BLOCKED_SITES = [
+  { domain: 'youtube.com', enabled: true },
+  { domain: 'instagram.com', enabled: true },
+  { domain: 'twitch.tv', enabled: true },
+  { domain: 'tiktok.com', enabled: true },
+  { domain: 'twitter.com', enabled: true },
+];
+
+const DEFAULT_PRESET_PARAMS = {
+  frequency: 16, depth: 0.5, waveform: 'sine',
+  spatialEnabled: false, spatialSpeed: 0.3, spatialWidth: 0.7,
+  crossoverEnabled: false, crossoverFreq: 300,
+  pinkNoiseEnabled: false, pinkNoiseMix: 0.03, pinkNoiseModulate: false,
+  noiseType: 'pink'
+};
+
+const BUILTIN_PRESETS = [
+  { name: 'Focus',    params: { ...DEFAULT_PRESET_PARAMS, spatialEnabled: true } },
+  { name: 'Pink Haze', params: { ...DEFAULT_PRESET_PARAMS, pinkNoiseEnabled: true } },
+  { name: 'Brown Haze', params: { ...DEFAULT_PRESET_PARAMS, pinkNoiseEnabled: true, noiseType: 'brown' } },
+  { name: 'Gray Haze', params: { ...DEFAULT_PRESET_PARAMS, pinkNoiseEnabled: true, noiseType: 'gray' } },
+];
 
 const els = {
   status: document.getElementById('status'),
@@ -21,11 +46,27 @@ const els = {
   spatialSpeedValue: document.getElementById('spatialSpeedValue'),
   spatialWidthValue: document.getElementById('spatialWidthValue'),
   spatialControls: document.getElementById('spatialControls'),
+  crossoverEnabled: document.getElementById('crossoverEnabled'),
+  crossoverFreq: document.getElementById('crossoverFreq'),
+  crossoverFreqValue: document.getElementById('crossoverFreqValue'),
+  crossoverControls: document.getElementById('crossoverControls'),
+  pinkNoiseEnabled: document.getElementById('pinkNoiseEnabled'),
+  pinkNoiseMix: document.getElementById('pinkNoiseMix'),
+  pinkNoiseMixValue: document.getElementById('pinkNoiseMixValue'),
+  pinkNoiseControls: document.getElementById('pinkNoiseControls'),
+  pinkNoiseModulate: document.getElementById('pinkNoiseModulate'),
+  noiseType: document.getElementById('noiseType'),
+  presetGrid: document.getElementById('presetGrid'),
+  presetNameInput: document.getElementById('presetNameInput'),
+  savePresetBtn: document.getElementById('savePresetBtn'),
+  blockEnabled: document.getElementById('blockEnabled'),
+  blockedSiteList: document.getElementById('blockedSiteList'),
+  newSiteInput: document.getElementById('newSiteInput'),
+  addSiteBtn: document.getElementById('addSiteBtn'),
   timerDisplay: document.getElementById('timerDisplay'),
-  countdownBtn: document.getElementById('countdownBtn'),
   countdownControls: document.getElementById('countdownControls'),
   presetBtns: document.querySelectorAll('.preset-btn'),
-  customSeconds: document.getElementById('customSeconds'),
+  customMinutes: document.getElementById('customMinutes'),
   startBtn: document.getElementById('startBtn'),
   stopBtn: document.getElementById('stopBtn'),
 };
@@ -37,7 +78,13 @@ function getParams() {
     waveform: els.waveform.value,
     spatialEnabled: els.spatialEnabled.checked,
     spatialSpeed: parseFloat(els.spatialSpeed.value),
-    spatialWidth: parseInt(els.spatialWidth.value) / 100
+    spatialWidth: parseInt(els.spatialWidth.value) / 100,
+    crossoverEnabled: els.crossoverEnabled.checked,
+    crossoverFreq: parseInt(els.crossoverFreq.value),
+    pinkNoiseEnabled: els.pinkNoiseEnabled.checked,
+    pinkNoiseMix: parseInt(els.pinkNoiseMix.value) / 100,
+    pinkNoiseModulate: els.pinkNoiseModulate.checked,
+    noiseType: els.noiseType.value
   };
 }
 
@@ -46,6 +93,8 @@ function updateDisplay() {
   els.depthValue.textContent = els.depth.value + '%';
   els.spatialSpeedValue.textContent = parseFloat(els.spatialSpeed.value).toFixed(1) + ' Hz';
   els.spatialWidthValue.textContent = els.spatialWidth.value + '%';
+  els.crossoverFreqValue.textContent = els.crossoverFreq.value + ' Hz';
+  els.pinkNoiseMixValue.textContent = els.pinkNoiseMix.value + '%';
 }
 
 function updateSpatialControls() {
@@ -56,12 +105,103 @@ function updateSpatialControls() {
   }
 }
 
-function sendParams() {
-  if (!isCapturing) return;
-  chrome.runtime.sendMessage({
-    type: 'UPDATE_PARAMS',
-    params: getParams()
+function updateCrossoverControls() {
+  if (els.crossoverEnabled.checked) {
+    els.crossoverControls.classList.add('enabled');
+  } else {
+    els.crossoverControls.classList.remove('enabled');
+  }
+}
+
+function updatePinkNoiseControls() {
+  if (els.pinkNoiseEnabled.checked) {
+    els.pinkNoiseControls.classList.add('enabled');
+  } else {
+    els.pinkNoiseControls.classList.remove('enabled');
+  }
+}
+
+function applyPreset(preset) {
+  const p = preset.params;
+  els.frequency.value = p.frequency;
+  els.depth.value = p.depth * 100;
+  els.waveform.value = p.waveform;
+  els.spatialEnabled.checked = p.spatialEnabled;
+  els.spatialSpeed.value = p.spatialSpeed;
+  els.spatialWidth.value = p.spatialWidth * 100;
+  els.crossoverEnabled.checked = p.crossoverEnabled;
+  els.crossoverFreq.value = p.crossoverFreq;
+  els.pinkNoiseEnabled.checked = p.pinkNoiseEnabled;
+  els.pinkNoiseMix.value = p.pinkNoiseMix * 100;
+  els.pinkNoiseModulate.checked = p.pinkNoiseModulate;
+  els.noiseType.value = p.noiseType || 'pink';
+
+  updateDisplay();
+  updateSpatialControls();
+  updateCrossoverControls();
+  updatePinkNoiseControls();
+  sendParams();
+}
+
+function saveCurrentPreset() {
+  const name = els.presetNameInput.value.trim();
+  if (!name) return;
+
+  const preset = { name, params: getParams() };
+  userPresets.push(preset);
+  chrome.storage.local.set({ userPresets }, () => {
+    els.presetNameInput.value = '';
+    renderPresets();
   });
+}
+
+function deleteUserPreset(index) {
+  userPresets.splice(index, 1);
+  chrome.storage.local.set({ userPresets }, () => {
+    renderPresets();
+  });
+}
+
+function renderPresets() {
+  els.presetGrid.innerHTML = '';
+
+  [...BUILTIN_PRESETS, ...userPresets].forEach((preset, i) => {
+    const isUser = i >= BUILTIN_PRESETS.length;
+    const userIdx = isUser ? i - BUILTIN_PRESETS.length : -1;
+
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'display:flex; align-items:center; gap:2px;';
+
+    const btn = document.createElement('button');
+    btn.textContent = preset.name;
+    btn.className = 'preset-grid-btn';
+    btn.style.flex = '1';
+    btn.addEventListener('click', () => applyPreset(preset));
+    wrapper.appendChild(btn);
+
+    if (isUser) {
+      const del = document.createElement('button');
+      del.textContent = '\u00d7';
+      del.style.cssText = 'width:18px;height:18px;border:none;background:transparent;color:#ff4757;border-radius:50%;cursor:pointer;font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+      del.title = 'Delete "' + preset.name + '"';
+      del.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (confirm('Delete "' + preset.name + '"?')) deleteUserPreset(userIdx);
+      });
+      wrapper.appendChild(del);
+    }
+
+    els.presetGrid.appendChild(wrapper);
+  });
+}
+
+function sendParams() {
+  if (isCapturing) {
+    chrome.runtime.sendMessage({
+      type: 'UPDATE_PARAMS',
+      params: getParams()
+    });
+  }
   saveSettings();
 }
 
@@ -72,7 +212,13 @@ async function saveSettings() {
     waveform: els.waveform.value,
     spatialEnabled: els.spatialEnabled.checked,
     spatialSpeed: els.spatialSpeed.value,
-    spatialWidth: els.spatialWidth.value
+    spatialWidth: els.spatialWidth.value,
+    crossoverEnabled: els.crossoverEnabled.checked,
+    crossoverFreq: els.crossoverFreq.value,
+    pinkNoiseEnabled: els.pinkNoiseEnabled.checked,
+    pinkNoiseMix: els.pinkNoiseMix.value,
+    pinkNoiseModulate: els.pinkNoiseModulate.checked,
+    noiseType: els.noiseType.value
   };
   await chrome.storage.local.set({ settings });
 }
@@ -87,9 +233,17 @@ async function loadSettings() {
     els.spatialEnabled.checked = s.spatialEnabled || false;
     els.spatialSpeed.value = s.spatialSpeed || 0.3;
     els.spatialWidth.value = s.spatialWidth || 70;
+    els.crossoverEnabled.checked = s.crossoverEnabled || false;
+    els.crossoverFreq.value = s.crossoverFreq || 300;
+    els.pinkNoiseEnabled.checked = s.pinkNoiseEnabled || false;
+    els.pinkNoiseMix.value = s.pinkNoiseMix || 3;
+    els.pinkNoiseModulate.checked = s.pinkNoiseModulate || false;
+    els.noiseType.value = s.noiseType || 'pink';
   }
   updateDisplay();
   updateSpatialControls();
+  updateCrossoverControls();
+  updatePinkNoiseControls();
 }
 
 function setCapturing(state, tabId) {
@@ -153,6 +307,96 @@ function resetTimer() {
   els.timerDisplay.textContent = '00:00';
 }
 
+function applyBlocking() {
+  if (!els.blockEnabled.checked) {
+    chrome.runtime.sendMessage({ type: 'SET_BLOCKED_DOMAINS', domains: [] });
+    return;
+  }
+  const enabledDomains = blockedSites
+    .filter(site => site.enabled)
+    .map(site => site.domain);
+  chrome.runtime.sendMessage({ type: 'SET_BLOCKED_DOMAINS', domains: enabledDomains });
+  if (enabledDomains.length > 0) {
+    chrome.runtime.sendMessage({ type: 'CLOSE_EXISTING_TABS' });
+  }
+}
+
+function renderBlockedSites() {
+  els.blockedSiteList.innerHTML = '';
+
+  blockedSites.forEach((site, i) => {
+    const row = document.createElement('div');
+    row.className = 'block-site-row';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = site.enabled;
+    cb.addEventListener('change', () => {
+      blockedSites[i].enabled = cb.checked;
+      saveBlockedSites();
+      if (els.blockEnabled.checked) applyBlocking();
+    });
+    row.appendChild(cb);
+
+    const name = document.createElement('span');
+    name.className = 'site-name';
+    name.textContent = site.domain;
+    row.appendChild(name);
+
+    const del = document.createElement('button');
+    del.className = 'site-del';
+    del.textContent = '\u00d7';
+    del.title = 'Remove ' + site.domain;
+    del.addEventListener('click', () => {
+      blockedSites.splice(i, 1);
+      saveBlockedSites();
+      renderBlockedSites();
+      if (els.blockEnabled.checked) applyBlocking();
+    });
+    row.appendChild(del);
+
+    els.blockedSiteList.appendChild(row);
+  });
+}
+
+function addBlockedSite() {
+  let domain = els.newSiteInput.value.trim().toLowerCase();
+  if (!domain) return;
+
+  if (domain.startsWith('http://') || domain.startsWith('https://')) {
+    domain = new URL(domain).hostname;
+  }
+  domain = domain.replace(/^www\./, '');
+
+  if (!domain || domain.includes(' ') || !domain.includes('.')) return;
+
+  if (blockedSites.some(s => s.domain === domain)) return;
+
+  blockedSites.push({ domain, enabled: true });
+  els.newSiteInput.value = '';
+  saveBlockedSites();
+  renderBlockedSites();
+  if (els.blockEnabled.checked) applyBlocking();
+}
+
+async function saveBlockedSites() {
+  await chrome.storage.local.set({ blockedSites });
+}
+
+async function loadBlockedSites() {
+  const result = await chrome.storage.local.get('blockedSites');
+  if (result.blockedSites && result.blockedSites.length > 0) {
+    blockedSites = result.blockedSites.map(s => typeof s === 'string' ? { domain: s, enabled: true } : s);
+  } else {
+    blockedSites = DEFAULT_BLOCKED_SITES.map(s => ({ ...s }));
+    await chrome.storage.local.set({ blockedSites });
+  }
+  const blockResult = await chrome.storage.local.get('blockEnabled');
+  els.blockEnabled.checked = blockResult.blockEnabled || false;
+  renderBlockedSites();
+  if (els.blockEnabled.checked) applyBlocking();
+}
+
 
 els.captureBtn.addEventListener('click', async () => {
   if (isCapturing) {
@@ -209,7 +453,40 @@ els.spatialEnabled.addEventListener('change', () => {
 els.spatialSpeed.addEventListener('input', () => { updateDisplay(); sendParams(); });
 els.spatialWidth.addEventListener('input', () => { updateDisplay(); sendParams(); });
 
+els.crossoverEnabled.addEventListener('change', () => {
+  updateCrossoverControls();
+  sendParams();
+});
 
+els.crossoverFreq.addEventListener('input', () => { updateDisplay(); sendParams(); });
+
+els.pinkNoiseEnabled.addEventListener('change', () => {
+  updatePinkNoiseControls();
+  sendParams();
+});
+
+els.pinkNoiseMix.addEventListener('input', () => { updateDisplay(); sendParams(); });
+
+els.pinkNoiseModulate.addEventListener('change', () => {
+  sendParams();
+});
+
+els.noiseType.addEventListener('change', () => {
+  sendParams();
+});
+
+els.savePresetBtn.addEventListener('click', saveCurrentPreset);
+
+els.blockEnabled.addEventListener('change', () => {
+  chrome.storage.local.set({ blockEnabled: els.blockEnabled.checked });
+  applyBlocking();
+});
+
+els.newSiteInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') addBlockedSite();
+});
+
+els.addSiteBtn.addEventListener('click', addBlockedSite);
 
 els.presetBtns.forEach(btn => {
   btn.addEventListener('click', () => {
@@ -221,9 +498,21 @@ els.presetBtns.forEach(btn => {
   });
 });
 
-els.startBtn.addEventListener('click', () => {
-  if (!isCapturing) return;
-  const seconds = parseInt(els.customSeconds.value);
+els.startBtn.addEventListener('click', async () => {
+  if (!isCapturing) {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tabs.length === 0) return;
+    const response = await chrome.runtime.sendMessage({
+      type: 'START_CAPTURE',
+      tabId: tabs[0].id
+    });
+    if (!response.success) return;
+    currentTabTitle = tabs[0].title;
+    setCapturing(true, tabs[0].id);
+  }
+
+  const minutes = parseInt(els.customMinutes.value);
+  const seconds = minutes * 60;
   if (seconds > 0 && seconds <= 5400) {
     chrome.runtime.sendMessage({ type: 'START_COUNTDOWN', seconds }, r => {
       if (r && r.endTime) startDisplayTick(r.endTime);
@@ -244,7 +533,15 @@ chrome.runtime.onMessage.addListener((message) => {
   }
 });
 
-loadSettings();
+(async () => {
+  await loadSettings();
+  await loadBlockedSites();
+})();
+
+chrome.storage.local.get('userPresets', result => {
+  userPresets = result.userPresets || [];
+  renderPresets();
+});
 
 chrome.runtime.sendMessage({ type: 'QUERY_STATUS' }, (response) => {
   if (response && response.capturing) {
