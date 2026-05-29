@@ -600,24 +600,9 @@ async function loadTheme() {
 }
 
 async function loadThemeUnlocks() {
-  const result = await chrome.storage.local.get(["themeUnlocks", "selectedTheme"]);
-
-  if (result.themeUnlocks && result.themeUnlocks.length > 0) {
-    unlockedThemeIds = new Set(result.themeUnlocks);
-  } else {
-    const initial = new Set(INITIALLY_UNLOCKED);
-    if (result.selectedTheme) initial.add(result.selectedTheme);
-    unlockedThemeIds = initial;
-    await chrome.storage.local.set({ themeUnlocks: [...unlockedThemeIds] });
-  }
-
-  if (result.selectedTheme && !unlockedThemeIds.has(result.selectedTheme)) {
-    unlockedThemeIds.add(result.selectedTheme);
-    await chrome.storage.local.set({ themeUnlocks: [...unlockedThemeIds] });
-  }
-
-  const timeResult = await chrome.storage.local.get("nextUnlockTime");
-  cooldownUntil = timeResult.nextUnlockTime || 0;
+  unlockedThemeIds = new Set(INITIALLY_UNLOCKED);
+  cooldownUntil = 0;
+  await chrome.storage.local.set({ themeUnlocks: [...unlockedThemeIds], nextUnlockTime: 0 });
 }
 
 function updateUnlockButton() {
@@ -645,7 +630,7 @@ function updateUnlockButton() {
   } else {
     els.unlockBtn.disabled = true;
     els.unlockBtn.className = "unlock-btn";
-    els.unlockBtn.textContent = "Unlock in " + Math.ceil(remaining / 1000) + "s";
+    els.unlockBtn.textContent = "Roll in " + Math.ceil(remaining / 1000) + "s";
   }
 }
 
@@ -668,7 +653,7 @@ function unlockRandomTheme() {
   unlockedThemeIds.add(randomId);
   chrome.storage.local.set({ themeUnlocks: [...unlockedThemeIds] });
 
-  startCooldown(10);
+  startCooldown(86400);
   renderThemes();
   updateUnlockButton();
 }
