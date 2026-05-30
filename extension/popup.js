@@ -600,9 +600,24 @@ async function loadTheme() {
 }
 
 async function loadThemeUnlocks() {
-  unlockedThemeIds = new Set(INITIALLY_UNLOCKED);
-  cooldownUntil = 0;
-  await chrome.storage.local.set({ themeUnlocks: [...unlockedThemeIds], nextUnlockTime: 0 });
+  const result = await chrome.storage.local.get(["themeUnlocks", "selectedTheme"]);
+
+  if (result.themeUnlocks && result.themeUnlocks.length > 0) {
+    unlockedThemeIds = new Set(result.themeUnlocks);
+  } else {
+    const initial = new Set(INITIALLY_UNLOCKED);
+    if (result.selectedTheme) initial.add(result.selectedTheme);
+    unlockedThemeIds = initial;
+    await chrome.storage.local.set({ themeUnlocks: [...unlockedThemeIds] });
+  }
+
+  if (result.selectedTheme && !unlockedThemeIds.has(result.selectedTheme)) {
+    unlockedThemeIds.add(result.selectedTheme);
+    await chrome.storage.local.set({ themeUnlocks: [...unlockedThemeIds] });
+  }
+
+  const timeResult = await chrome.storage.local.get("nextUnlockTime");
+  cooldownUntil = timeResult.nextUnlockTime || 0;
 }
 
 function updateUnlockButton() {
