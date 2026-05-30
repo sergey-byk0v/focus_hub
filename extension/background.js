@@ -64,7 +64,12 @@ async function loadBlockerState() {
 
 chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
   if (details.frameId !== 0) return;
-  if (blockedDomains.length === 0) return;
+
+  if (blockedDomains.length === 0) {
+    const result = await chrome.storage.local.get('blockedDomains');
+    if (result.blockedDomains) blockedDomains = result.blockedDomains;
+    if (blockedDomains.length === 0) return;
+  }
 
   try {
     const url = new URL(details.url);
