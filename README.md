@@ -23,4 +23,4 @@ Two blocking modes for allowed sites:
 Per-site enable/disable checkboxes, add/remove sites.
 
 ### Themes
-30 hand-crafted color themes across 6 palettes (dark, slate, medium, light, pastel, vibrant). Unlock new themes through use — one random locked theme becomes available every 12 hours.
+30 color themes across 6 palettes (dark, slate, medium, light, pastel, vibrant).
