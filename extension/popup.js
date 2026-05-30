@@ -92,7 +92,7 @@ function getParams() {
     crossoverEnabled: els.crossoverEnabled.checked,
     crossoverFreq: parseInt(els.crossoverFreq.value),
     pinkNoiseEnabled: els.pinkNoiseEnabled.checked,
-    pinkNoiseMix: parseInt(els.pinkNoiseMix.value) / 100,
+    pinkNoiseMix: parseFloat(els.pinkNoiseMix.value) / 100,
     pinkNoiseModulate: els.pinkNoiseModulate.checked,
     noiseType: els.noiseType.value
   };
@@ -460,7 +460,7 @@ els.freqDown.addEventListener('click', () => {
 
 els.freqUp.addEventListener('click', () => {
   const current = parseFloat(els.frequency.value);
-  els.frequency.value = Math.min(100, current + 1);
+  els.frequency.value = Math.min(50, current + 1);
   updateDisplay();
   sendParams();
 });
