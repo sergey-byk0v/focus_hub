@@ -9,6 +9,8 @@ let spatialWidthGain = null;
 let currentStream = null;
 let lowPass = null;
 let highPass = null;
+let lowPass2 = null;
+let highPass2 = null;
 let dryGain = null;
 let summer = null;
 let crossoverEnabled = false;
@@ -109,10 +111,20 @@ function createAudioGraph() {
   lowPass.frequency.value = params.crossoverFreq;
   lowPass.Q.value = 1 / Math.SQRT2;
 
+  lowPass2 = audioCtx.createBiquadFilter();
+  lowPass2.type = 'lowpass';
+  lowPass2.frequency.value = params.crossoverFreq;
+  lowPass2.Q.value = 1 / Math.SQRT2;
+
   highPass = audioCtx.createBiquadFilter();
   highPass.type = 'highpass';
   highPass.frequency.value = params.crossoverFreq;
   highPass.Q.value = 1 / Math.SQRT2;
+
+  highPass2 = audioCtx.createBiquadFilter();
+  highPass2.type = 'highpass';
+  highPass2.frequency.value = params.crossoverFreq;
+  highPass2.Q.value = 1 / Math.SQRT2;
 
   dryGain = audioCtx.createGain();
   dryGain.gain.value = 1.0;
@@ -141,7 +153,9 @@ function rewireGraph() {
 
   sourceNode.disconnect();
   lowPass.disconnect();
+  lowPass2.disconnect();
   highPass.disconnect();
+  highPass2.disconnect();
   dryGain.disconnect();
   summer.disconnect();
   carrierGain.disconnect();
@@ -149,8 +163,10 @@ function rewireGraph() {
   if (crossoverEnabled) {
     sourceNode.connect(lowPass);
     sourceNode.connect(highPass);
-    lowPass.connect(carrierGain);
-    highPass.connect(dryGain);
+    lowPass.connect(lowPass2);
+    highPass.connect(highPass2);
+    lowPass2.connect(carrierGain);
+    highPass2.connect(dryGain);
     carrierGain.connect(summer);
     dryGain.connect(summer);
     summer.connect(spatialPanner);
@@ -317,7 +333,9 @@ function updateParams(newParams) {
 
     if (audioCtx && lowPass) {
       lowPass.frequency.setTargetAtTime(params.crossoverFreq, audioCtx.currentTime, 0.01);
+      lowPass2.frequency.setTargetAtTime(params.crossoverFreq, audioCtx.currentTime, 0.01);
       highPass.frequency.setTargetAtTime(params.crossoverFreq, audioCtx.currentTime, 0.01);
+      highPass2.frequency.setTargetAtTime(params.crossoverFreq, audioCtx.currentTime, 0.01);
     }
 
     if (params.pinkNoiseEnabled !== prevPinkNoise) {
