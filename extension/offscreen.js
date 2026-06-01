@@ -107,12 +107,12 @@ function createAudioGraph() {
   lowPass = audioCtx.createBiquadFilter();
   lowPass.type = 'lowpass';
   lowPass.frequency.value = params.crossoverFreq;
-  lowPass.Q.value = 0.5;
+  lowPass.Q.value = 1 / Math.SQRT2;
 
   highPass = audioCtx.createBiquadFilter();
   highPass.type = 'highpass';
   highPass.frequency.value = params.crossoverFreq;
-  highPass.Q.value = 0.5;
+  highPass.Q.value = 1 / Math.SQRT2;
 
   dryGain = audioCtx.createGain();
   dryGain.gain.value = 1.0;
