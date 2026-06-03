@@ -4,7 +4,9 @@ let currentTabTitle = '';
 let displayInterval = null;
 let displayEndTime = null;
 let userPresets = [];
-let blockedSites = [];
+let blocklistSites = [];
+let whitelistSites = [];
+let listMode = 'blocklist';
 let blockingMode = 'reason';
 
 const INITIALLY_UNLOCKED = ['dark'];
@@ -31,9 +33,7 @@ const DEFAULT_PRESET_PARAMS = {
 
 const BUILTIN_PRESETS = [
   { name: 'Focus',    params: { ...DEFAULT_PRESET_PARAMS, spatialEnabled: true } },
-  { name: 'Pink Haze', params: { ...DEFAULT_PRESET_PARAMS, pinkNoiseEnabled: true } },
   { name: 'Brown Haze', params: { ...DEFAULT_PRESET_PARAMS, pinkNoiseEnabled: true, noiseType: 'brown' } },
-  { name: 'Gray Haze', params: { ...DEFAULT_PRESET_PARAMS, pinkNoiseEnabled: true, noiseType: 'gray' } },
 ];
 
 const els = {
@@ -77,6 +77,8 @@ const els = {
   stopBtn: document.getElementById('stopBtn'),
   modeReason: document.getElementById('modeReason'),
   modeBlockBtn: document.getElementById('modeBlockBtn'),
+  modeBlocklist: document.getElementById('modeBlocklist'),
+  modeWhitelist: document.getElementById('modeWhitelist'),
   themeGrid: document.getElementById('themeGrid'),
   unlockBtn: document.getElementById('unlockBtn'),
 };
@@ -317,19 +319,19 @@ function resetTimer() {
 
 function applyBlocking() {
   if (!els.blockEnabled.checked) {
-    chrome.runtime.sendMessage({ type: 'SET_BLOCKED_DOMAINS', domains: [] });
+    chrome.runtime.sendMessage({ type: 'SET_BLOCKED_DOMAINS', blocklist: [], whitelist: [], mode: listMode });
     return;
   }
-  const enabledDomains = blockedSites
-    .filter(site => site.enabled)
-    .map(site => site.domain);
-  chrome.runtime.sendMessage({ type: 'SET_BLOCKED_DOMAINS', domains: enabledDomains });
+  const enabledBlocklist = blocklistSites.filter(site => site.enabled).map(site => site.domain);
+  const enabledWhitelist = whitelistSites.filter(site => site.enabled).map(site => site.domain);
+  chrome.runtime.sendMessage({ type: 'SET_BLOCKED_DOMAINS', blocklist: enabledBlocklist, whitelist: enabledWhitelist, mode: listMode });
 }
 
-function renderBlockedSites() {
+function renderSiteList() {
   els.blockedSiteList.innerHTML = '';
+  const sites = listMode === 'blocklist' ? blocklistSites : whitelistSites;
 
-  blockedSites.forEach((site, i) => {
+  sites.forEach((site, i) => {
     const row = document.createElement('div');
     row.className = 'block-site-row';
 
@@ -337,7 +339,7 @@ function renderBlockedSites() {
     cb.type = 'checkbox';
     cb.checked = site.enabled;
     cb.addEventListener('change', () => {
-      blockedSites[i].enabled = cb.checked;
+      sites[i].enabled = cb.checked;
       saveBlockedSites();
       if (els.blockEnabled.checked) applyBlocking();
     });
@@ -353,9 +355,9 @@ function renderBlockedSites() {
     del.textContent = '\u00d7';
     del.title = 'Remove ' + site.domain;
     del.addEventListener('click', () => {
-      blockedSites.splice(i, 1);
+      sites.splice(i, 1);
       saveBlockedSites();
-      renderBlockedSites();
+      renderSiteList();
       if (els.blockEnabled.checked) applyBlocking();
     });
     row.appendChild(del);
@@ -375,36 +377,55 @@ function addBlockedSite() {
 
   if (!domain || domain.includes(' ') || !domain.includes('.')) return;
 
-  if (blockedSites.some(s => s.domain === domain)) return;
+  const sites = listMode === 'blocklist' ? blocklistSites : whitelistSites;
+  if (sites.some(s => s.domain === domain)) return;
 
-  blockedSites.push({ domain, enabled: true });
+  sites.push({ domain, enabled: true });
   els.newSiteInput.value = '';
   saveBlockedSites();
-  renderBlockedSites();
+  renderSiteList();
   if (els.blockEnabled.checked) applyBlocking();
 }
 
 async function saveBlockedSites() {
-  await chrome.storage.local.set({ blockedSites });
+  await chrome.storage.local.set({ blocklistSites, whitelistSites, listMode });
 }
 
 async function loadBlockedSites() {
-  const result = await chrome.storage.local.get('blockedSites');
-  if (result.blockedSites && result.blockedSites.length > 0) {
-    blockedSites = result.blockedSites.map(s => typeof s === 'string' ? { domain: s, enabled: true } : s);
+  const result = await chrome.storage.local.get(['blocklistSites', 'whitelistSites', 'listMode', 'blockEnabled']);
+
+  if (result.blocklistSites && result.blocklistSites.length > 0) {
+    blocklistSites = result.blocklistSites.map(s => typeof s === 'string' ? { domain: s, enabled: true } : s);
   } else {
-    blockedSites = DEFAULT_BLOCKED_SITES.map(s => ({ ...s }));
-    await chrome.storage.local.set({ blockedSites });
+    blocklistSites = DEFAULT_BLOCKED_SITES.map(s => ({ ...s }));
+    await chrome.storage.local.set({ blocklistSites });
   }
-  const blockResult = await chrome.storage.local.get('blockEnabled');
-  els.blockEnabled.checked = blockResult.blockEnabled || false;
-  renderBlockedSites();
+
+  if (result.whitelistSites && result.whitelistSites.length > 0) {
+    whitelistSites = result.whitelistSites.map(s => typeof s === 'string' ? { domain: s, enabled: true } : s);
+  } else {
+    whitelistSites = [];
+    await chrome.storage.local.set({ whitelistSites });
+  }
+
+  listMode = result.listMode || 'blocklist';
+  els.blockEnabled.checked = result.blockEnabled || false;
+
+  updateListModeUI();
+  renderSiteList();
   if (els.blockEnabled.checked) applyBlocking();
 }
 
 function updateModeUI() {
   els.modeReason.classList.toggle('active', blockingMode === 'reason');
   els.modeBlockBtn.classList.toggle('active', blockingMode === 'complete');
+}
+
+function updateListModeUI() {
+  els.modeBlocklist.classList.toggle('active', listMode === 'blocklist');
+  els.modeWhitelist.classList.toggle('active', listMode === 'whitelist');
+  els.newSiteInput.placeholder = listMode === 'blocklist' ? 'Add site to block' : 'Add site to allow';
+  renderSiteList();
 }
 
 async function loadBlockingMode() {
@@ -500,6 +521,20 @@ els.savePresetBtn.addEventListener('click', saveCurrentPreset);
 els.blockEnabled.addEventListener('change', () => {
   chrome.storage.local.set({ blockEnabled: els.blockEnabled.checked });
   applyBlocking();
+});
+
+els.modeBlocklist.addEventListener('click', () => {
+  listMode = 'blocklist';
+  saveBlockedSites();
+  updateListModeUI();
+  if (els.blockEnabled.checked) applyBlocking();
+});
+
+els.modeWhitelist.addEventListener('click', () => {
+  listMode = 'whitelist';
+  saveBlockedSites();
+  updateListModeUI();
+  if (els.blockEnabled.checked) applyBlocking();
 });
 
 els.newSiteInput.addEventListener('keydown', (e) => {

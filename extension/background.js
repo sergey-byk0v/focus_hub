@@ -53,28 +53,42 @@ function sendMessageToOffscreen(data) {
 
 // ==================== Site Reason Blocker Section ====================
 
-let blockedDomains = [];
+let blocklistDomains = [];
+let whitelistDomains = [];
+let listMode = 'blocklist';
 let blockingMode = 'reason';
 
 async function loadBlockerState() {
-  const result = await chrome.storage.local.get(['blockedDomains', 'blockingMode']);
-  if (result.blockedDomains) blockedDomains = result.blockedDomains;
+  const result = await chrome.storage.local.get(['blocklistDomains', 'whitelistDomains', 'listMode', 'blockingMode']);
+  if (result.blocklistDomains) blocklistDomains = result.blocklistDomains;
+  if (result.whitelistDomains) whitelistDomains = result.whitelistDomains;
+  if (result.listMode) listMode = result.listMode;
   if (result.blockingMode) blockingMode = result.blockingMode;
 }
 
 chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
   if (details.frameId !== 0) return;
 
-  if (blockedDomains.length === 0) {
-    const result = await chrome.storage.local.get('blockedDomains');
-    if (result.blockedDomains) blockedDomains = result.blockedDomains;
-    if (blockedDomains.length === 0) return;
+  if (blocklistDomains.length === 0 && whitelistDomains.length === 0) {
+    const result = await chrome.storage.local.get(['blocklistDomains', 'whitelistDomains', 'listMode']);
+    if (result.blocklistDomains) blocklistDomains = result.blocklistDomains;
+    if (result.whitelistDomains) whitelistDomains = result.whitelistDomains;
+    if (result.listMode) listMode = result.listMode;
   }
+
+  if (listMode === 'blocklist' && blocklistDomains.length === 0) return;
 
   try {
     const url = new URL(details.url);
     const hostname = url.hostname.replace(/^www\./, '');
-    if (!blockedDomains.some(d => hostname === d || hostname.endsWith('.' + d))) return;
+
+    let shouldBlock;
+    if (listMode === 'blocklist') {
+      shouldBlock = blocklistDomains.some(d => hostname === d || hostname.endsWith('.' + d));
+    } else {
+      shouldBlock = !whitelistDomains.some(d => hostname === d || hostname.endsWith('.' + d));
+    }
+    if (!shouldBlock) return;
 
     const { approved } = await chrome.storage.session.get({ approved: {} });
     const key = String(details.tabId);
@@ -202,8 +216,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'SET_BLOCKED_DOMAINS') {
-    blockedDomains = message.domains;
-    chrome.storage.local.set({ blockedDomains });
+    blocklistDomains = message.blocklist || [];
+    whitelistDomains = message.whitelist || [];
+    listMode = message.mode || 'blocklist';
+    chrome.storage.local.set({ blocklistDomains, whitelistDomains, listMode });
     sendResponse({ success: true });
     return true;
   }
@@ -216,7 +232,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'GET_BLOCKER_STATE') {
-    sendResponse({ blockedDomains, blockingMode });
+    sendResponse({ blocklistDomains, whitelistDomains, listMode, blockingMode });
     return true;
   }
 });
