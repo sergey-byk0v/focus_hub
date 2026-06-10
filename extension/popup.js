@@ -613,6 +613,8 @@ function renderThemes() {
       btn.appendChild(swatch);
 
       btn.addEventListener("click", () => selectTheme(theme.id));
+    } else {
+      btn.textContent = "?";
     }
 
     els.themeGrid.appendChild(btn);
@@ -695,6 +697,7 @@ function startCooldown(seconds) {
   if (cooldownInterval) clearInterval(cooldownInterval);
   cooldownInterval = setInterval(updateUnlockButton, 200);
 }
+
 
 function unlockRandomTheme() {
   const lockedIds = THEMES.filter(t => !unlockedThemeIds.has(t.id)).map(t => t.id);

@@ -9,15 +9,19 @@
   const mode = params.get('mode');
 
   const siteNameEl = document.getElementById('site-name');
-  const reasonInput = document.getElementById('reason-input');
   const proceedBtn = document.getElementById('proceed-btn');
   const exportBtn = document.getElementById('export-btn');
-  const entryCountEl = document.getElementById('entry-count');
+
+  const tagGrid = document.getElementById('tagGrid');
+  const otherInputWrapper = document.getElementById('otherInputWrapper');
+  const otherInput = document.getElementById('reason-input');
 
   const reasonUi = document.getElementById('reason-ui');
   const blockedUi = document.getElementById('blocked-ui');
   const blockedSiteName = document.getElementById('blocked-site-name');
   const closeBtn = document.getElementById('close-btn');
+
+  var selectedTag = null;
 
   var siteDisplay = 'a site';
   if (targetUrl) {
@@ -39,9 +43,47 @@
     return;
   }
 
+  // ===== Tag selection =====
+  tagGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('.tag-btn');
+    if (!btn) return;
+
+    tagGrid.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedTag = btn.dataset.tag;
+
+    if (selectedTag === 'Other') {
+      otherInputWrapper.style.display = 'block';
+      otherInput.focus();
+    } else {
+      otherInputWrapper.style.display = 'none';
+      otherInput.value = '';
+    }
+
+    updateProceedBtn();
+  });
+
+  otherInput.addEventListener('input', updateProceedBtn);
+
+  function updateProceedBtn() {
+    if (!selectedTag) {
+      proceedBtn.disabled = true;
+      return;
+    }
+    if (selectedTag === 'Other' && !otherInput.value.trim()) {
+      proceedBtn.disabled = true;
+      return;
+    }
+    if (countdownDone) {
+      proceedBtn.disabled = false;
+      proceedBtn.textContent = 'Proceed';
+    }
+  }
+
   // ===== Reason mode (default) =====
   const COUNTDOWN_SECONDS = 10;
   var countdown = COUNTDOWN_SECONDS;
+  var countdownDone = false;
 
   function tick() {
     if (countdown > 0) {
@@ -50,24 +92,35 @@
       countdown--;
       setTimeout(tick, 1000);
     } else {
-      proceedBtn.disabled = false;
+      countdownDone = true;
       proceedBtn.textContent = 'Proceed';
+      updateProceedBtn();
     }
   }
 
-  if (COUNTDOWN_SECONDS > 0) {
-    tick();
-  } else {
-    proceedBtn.disabled = false;
-    proceedBtn.textContent = 'Proceed';
-  }
+  tick();
 
   async function proceed() {
-    var reason = reasonInput.value.trim();
-    if (!reason) {
-      alert('Please enter a reason.');
+    if (!selectedTag) {
+      alert('Please select a reason.');
       return;
     }
+
+    var reason;
+    var tag = selectedTag;
+    var customText = '';
+
+    if (selectedTag === 'Other') {
+      customText = otherInput.value.trim();
+      if (!customText) {
+        alert('Please enter what you are doing.');
+        return;
+      }
+      reason = 'Other: ' + customText;
+    } else {
+      reason = selectedTag;
+    }
+
     if (!targetUrl || !tabId) {
       alert('No target URL specified.');
       return;
@@ -77,6 +130,8 @@
     entries.push({
       url: targetUrl,
       reason: reason,
+      tag: tag,
+      customText: customText,
       timestamp: Date.now(),
       date: new Date().toISOString()
     });
@@ -101,9 +156,9 @@
       return;
     }
 
-    var headers = 'url,reason,timestamp,date';
+    var headers = 'url,reason,tag,customText,timestamp,date';
     var rows = entries.map(function (e) {
-      return '"' + escCsv(e.url) + '","' + escCsv(e.reason) + '","' + e.timestamp + '","' + e.date + '"';
+      return '"' + escCsv(e.url) + '","' + escCsv(e.reason) + '","' + escCsv(e.tag || '') + '","' + escCsv(e.customText || '') + '","' + e.timestamp + '","' + e.date + '"';
     });
     var csv = [headers].concat(rows).join('\n');
 
@@ -119,12 +174,79 @@
     return String(str).replace(/"/g, '""');
   }
 
-  async function updateEntryCount() {
-    var { entries } = await chrome.storage.local.get({ entries: [] });
-    entryCountEl.textContent = entries.length + ' entries logged';
+
+  // ===== Statistics =====
+  const statsToggle = document.getElementById('statsToggle');
+  const statsContent = document.getElementById('statsContent');
+  const chartEl = document.getElementById('statsChart');
+  const statsTotalEl = document.getElementById('statsTotal');
+  const clearStatsBtn = document.getElementById('clearStatsBtn');
+
+  statsToggle.addEventListener('click', function () {
+    var isHidden = statsContent.style.display === 'none';
+    statsContent.style.display = isHidden ? 'block' : 'none';
+    statsToggle.textContent = isHidden ? 'Hide Statistics ▾' : 'Show Statistics ▸';
+    if (isHidden) renderStats();
+  });
+
+  clearStatsBtn.addEventListener('click', function () {
+    if (!confirm('Clear all logged entries?')) return;
+    chrome.storage.local.set({ entries: [] }, function () {
+      renderStats();
+    });
+  });
+
+  function renderStats() {
+    chrome.storage.local.get({ entries: [] }, function (result) {
+      var entries = result.entries;
+      var counts = {};
+      entries.forEach(function (e) {
+        var tag = e.tag || 'Other';
+        counts[tag] = (counts[tag] || 0) + 1;
+      });
+
+      var tags = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
+      var maxCount = 0;
+      tags.forEach(function (t) { if (counts[t] > maxCount) maxCount = counts[t]; });
+
+      statsTotalEl.textContent = entries.length + ' total';
+
+      chartEl.innerHTML = '';
+      tags.forEach(function (tag) {
+        var count = counts[tag];
+        var pct = maxCount > 0 ? (count / maxCount * 100) : 0;
+
+        var row = document.createElement('div');
+        row.className = 'stats-bar-row';
+
+        var label = document.createElement('div');
+        label.className = 'stats-bar-label';
+        label.textContent = tag;
+        row.appendChild(label);
+
+        var track = document.createElement('div');
+        track.className = 'stats-bar-track';
+
+        var fill = document.createElement('div');
+        fill.className = 'stats-bar-fill';
+        fill.style.width = pct + '%';
+        track.appendChild(fill);
+        row.appendChild(track);
+
+        var countEl = document.createElement('div');
+        countEl.className = 'stats-bar-count';
+        countEl.textContent = count;
+        row.appendChild(countEl);
+
+        chartEl.appendChild(row);
+      });
+
+      if (tags.length === 0) {
+        chartEl.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:16px 0;">No entries yet</div>';
+      }
+    });
   }
 
   proceedBtn.addEventListener('click', proceed);
   exportBtn.addEventListener('click', exportCsv);
-  updateEntryCount();
 })();

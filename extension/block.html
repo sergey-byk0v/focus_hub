@@ -8,19 +8,40 @@
 <body>
   <div class="container">
     <div id="reason-ui">
-      <p class="subtitle">You're about to visit <strong id="site-name"></strong></p>
-      <p class="question">Why do you need to open this site?</p>
-      <textarea id="reason-input" placeholder="Enter your reason..." rows="4"></textarea>
-      <button id="proceed-btn" disabled>Loading...</button>
-      <div class="actions">
-        <button id="export-btn">Export CSV</button>
-        <span id="entry-count"></span>
+      <p class="question">Why do you need to open <strong id="site-name"></strong>?</p>
+
+      <div class="tag-grid" id="tagGrid">
+        <button class="tag-btn" data-tag="Waiting">Waiting</button>
+        <button class="tag-btn" data-tag="Bored">Bored</button>
+        <button class="tag-btn" data-tag="Procrastination">Procrastination</button>
+        <button class="tag-btn" data-tag="Avoiding something">Avoiding something</button>
+        <button class="tag-btn" data-tag="Free-time chill">Free-time chill</button>
+        <button class="tag-btn" data-tag="Work/Study">Work/Study</button>
+        <button class="tag-btn" data-tag="On background">On background</button>
+        <button class="tag-btn" data-tag="Other">Other</button>
       </div>
+
+      <div id="otherInputWrapper" style="display:none">
+        <textarea id="reason-input" placeholder="What are you doing?" rows="2"></textarea>
+      </div>
+
+      <button id="proceed-btn" disabled>Loading...</button>
     </div>
     <div id="blocked-ui" style="display:none">
       <p class="blocked-title">Site Blocked</p>
       <p class="subtitle"><strong id="blocked-site-name"></strong> is blocked</p>
       <button id="close-btn">Close Tab</button>
+    </div>
+  <div id="statsSection" class="stats-section">
+      <button id="statsToggle" class="stats-toggle">Show Statistics ▸</button>
+      <div id="statsContent" class="stats-content" style="display:none">
+        <div class="stats-header">
+          <span id="statsTotal"></span>
+          <button id="clearStatsBtn" class="clear-btn">Clear All</button>
+        </div>
+        <div id="statsChart" class="stats-chart"></div>
+        <button id="export-btn" class="clear-btn">Export CSV</button>
+      </div>
     </div>
   </div>
   <script src="theme-data.js"></script>
