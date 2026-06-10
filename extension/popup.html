@@ -148,14 +148,19 @@
     #tabTimer:checked ~ .tab-bar label[for="tabTimer"],
     #tabModulation:checked ~ .tab-bar label[for="tabModulation"],
     #tabBlock:checked ~ .tab-bar label[for="tabBlock"],
-    #tabGamba:checked ~ .tab-bar label[for="tabGamba"] {
+    #tabThemes:checked ~ .tab-bar label[for="tabThemes"] {
+      color: var(--text);
+      border-bottom-color: var(--accent);
+    }
+    #tabSettings:checked ~ .tab-bar label[for="tabSettings"] {
       color: var(--text);
       border-bottom-color: var(--accent);
     }
     #tabTimer:checked ~ #controls #panelTimer { display: block; }
     #tabModulation:checked ~ #controls #panelModulation { display: block; }
     #tabBlock:checked ~ #controls #panelBlock { display: block; }
-    #tabGamba:checked ~ #controls #panelGamba { display: block; }
+    #tabThemes:checked ~ #controls #panelThemes { display: block; }
+    #tabSettings:checked ~ #controls #panelSettings { display: block; }
 
     .tab-bar {
       display: flex;
@@ -164,7 +169,7 @@
       margin-bottom: 12px;
     }
     .tab-label {
-      padding: 6px 12px;
+      padding: 6px 8px;
       cursor: pointer;
       color: var(--text-muted);
       font-size: 13px;
@@ -497,16 +502,18 @@
   <input type="radio" name="tab" id="tabTimer" checked>
   <input type="radio" name="tab" id="tabModulation">
   <input type="radio" name="tab" id="tabBlock">
-  <input type="radio" name="tab" id="tabGamba">
+  <input type="radio" name="tab" id="tabThemes">
+  <input type="radio" name="tab" id="tabSettings">
 
   <button id="captureBtn" class="start">Start Capture</button>
   <div id="status" class="status idle">Idle</div>
 
   <div class="tab-bar">
-    <label for="tabTimer" class="tab-label">Timer</label>
-    <label for="tabModulation" class="tab-label">Modulation</label>
-    <label for="tabBlock" class="tab-label">Blocking</label>
-    <label for="tabGamba" class="tab-label">Themes</label>
+    <label for="tabTimer" class="tab-label" id="labelTimer">Timer</label>
+    <label for="tabModulation" class="tab-label" id="labelModulation">Modulation</label>
+    <label for="tabBlock" class="tab-label" id="labelBlock">Blocking</label>
+    <label for="tabThemes" class="tab-label" id="labelThemes">Themes</label>
+    <label for="tabSettings" class="tab-label" id="labelSettings">⚙</label>
   </div>
 
   <div id="controls" class="controls">
@@ -639,10 +646,29 @@
         <button id="addSiteBtn" class="timer-btn primary" style="font-size:11px; white-space:nowrap;">+ Add</button>
       </div>
     </div>
-    <div class="tab-panel" id="panelGamba">
+    <div class="tab-panel" id="panelThemes">
       <div class="section-box">
         <button id="unlockBtn" class="unlock-btn">Roll!</button>
         <div id="themeGrid" class="theme-grid"></div>
+      </div>
+    </div>
+    <div class="tab-panel" id="panelSettings">
+      <div class="section-box">
+        <div class="section-header"><label>Visible Tabs</label></div>
+        <div id="tabToggleList">
+          <label class="toggle-row" style="margin-bottom:6px;">
+            <input type="checkbox" class="tab-toggle" data-tab="timer" checked> Timer
+          </label>
+          <label class="toggle-row" style="margin-bottom:6px;">
+            <input type="checkbox" class="tab-toggle" data-tab="modulation" checked> Modulation
+          </label>
+          <label class="toggle-row" style="margin-bottom:6px;">
+            <input type="checkbox" class="tab-toggle" data-tab="block" checked> Blocking
+          </label>
+          <label class="toggle-row" style="margin-bottom:6px;">
+            <input type="checkbox" class="tab-toggle" data-tab="themes" checked> Themes
+          </label>
+        </div>
       </div>
     </div>
 </div>

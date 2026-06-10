@@ -8,6 +8,7 @@ let blocklistSites = [];
 let whitelistSites = [];
 let listMode = 'blocklist';
 let blockingMode = 'reason';
+let enabledTabs = ['timer', 'modulation', 'block', 'themes'];
 
 const INITIALLY_UNLOCKED = ['dark'];
 let unlockedThemeIds = new Set(INITIALLY_UNLOCKED);
@@ -593,6 +594,46 @@ els.stopBtn.addEventListener('click', () => {
   els.timerDisplay.textContent = '00:00';
 });
 
+function updateTabVisibility() {
+  var tabs = ['timer', 'modulation', 'block', 'themes'];
+  tabs.forEach(function(tab) {
+    var label = document.getElementById('label' + tab.charAt(0).toUpperCase() + tab.slice(1));
+    var panel = document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1));
+    var visible = enabledTabs.indexOf(tab) !== -1;
+    if (label) label.style.display = visible ? '' : 'none';
+    if (panel) panel.style.display = visible ? '' : 'none';
+  });
+}
+
+function activateFirstEnabledTab() {
+  var tabs = ['timer', 'modulation', 'block', 'themes'];
+  for (var i = 0; i < tabs.length; i++) {
+    if (enabledTabs.indexOf(tabs[i]) !== -1) {
+      var radio = document.getElementById('tab' + tabs[i].charAt(0).toUpperCase() + tabs[i].slice(1));
+      if (radio) { radio.checked = true; return; }
+    }
+  }
+  document.getElementById('tabSettings').checked = true;
+}
+
+async function saveTabVisibility() {
+  await chrome.storage.local.set({ enabledTabs: enabledTabs });
+}
+
+async function loadTabVisibility() {
+  var result = await chrome.storage.local.get('enabledTabs');
+  if (result.enabledTabs && result.enabledTabs.length > 0) {
+    enabledTabs = result.enabledTabs;
+  } else {
+    enabledTabs = ['timer', 'modulation', 'block', 'themes'];
+  }
+  document.querySelectorAll('.tab-toggle').forEach(function(cb) {
+    cb.checked = enabledTabs.indexOf(cb.dataset.tab) !== -1;
+  });
+  updateTabVisibility();
+  activateFirstEnabledTab();
+}
+
 function renderThemes() {
   els.themeGrid.innerHTML = "";
   THEMES.forEach(theme => {
@@ -717,6 +758,24 @@ function unlockRandomTheme() {
 
 els.unlockBtn.addEventListener("click", unlockRandomTheme);
 
+document.querySelectorAll('.tab-toggle').forEach(function(cb) {
+  cb.addEventListener('change', function() {
+    var tab = cb.dataset.tab;
+    if (cb.checked) {
+      if (enabledTabs.indexOf(tab) === -1) enabledTabs.push(tab);
+    } else {
+      enabledTabs = enabledTabs.filter(function(t) { return t !== tab; });
+      var checkedRadio = document.querySelector('input[name="tab"]:checked');
+      if (checkedRadio) {
+        var currentId = checkedRadio.id.toLowerCase();
+        if (currentId === 'tab' + tab) activateFirstEnabledTab();
+      }
+    }
+    saveTabVisibility();
+    updateTabVisibility();
+  });
+});
+
 chrome.runtime.onMessage.addListener((message) => {
   if (message.type === 'CAPTURE_ENDED') {
     resetTimer();
@@ -730,6 +789,7 @@ chrome.runtime.onMessage.addListener((message) => {
   await loadBlockingMode();
   await loadTheme();
   await loadThemeUnlocks();
+  await loadTabVisibility();
   renderThemes();
   updateUnlockButton();
 })();
