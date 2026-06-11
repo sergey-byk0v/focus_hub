@@ -587,13 +587,17 @@
         <div class="section-header">
           <label>
             <input type="checkbox" id="crossoverEnabled">
-            Low-Freq Only
+            Filter
           </label>
         </div>
         <div id="crossoverControls" class="section-sub-controls">
+          <div class="mode-toggle" style="margin-bottom:8px;">
+            <button id="crossoverModeLow" class="active">Low</button>
+            <button id="crossoverModeHigh">High</button>
+          </div>
           <div class="control-group">
-            <label>Crossover Freq <span id="crossoverFreqValue" class="value">300 Hz</span></label>
-            <input type="range" id="crossoverFreq" min="50" max="2000" step="10" value="300">
+            <label>Threshold <span id="crossoverFreqValue" class="value">300 Hz</span></label>
+            <input type="range" id="crossoverFreq" min="50" max="4000" step="10" value="300">
           </div>
         </div>
       </div>

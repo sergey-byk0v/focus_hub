@@ -8,6 +8,7 @@ let blocklistSites = [];
 let whitelistSites = [];
 let listMode = 'blocklist';
 let blockingMode = 'reason';
+let crossoverMode = 'low';
 let enabledTabs = ['timer', 'modulation', 'block', 'themes'];
 
 const INITIALLY_UNLOCKED = ['dark'];
@@ -27,7 +28,7 @@ const DEFAULT_BLOCKED_SITES = [
 const DEFAULT_PRESET_PARAMS = {
   frequency: 16, depth: 0.5, waveform: 'sine',
   spatialEnabled: false, spatialSpeed: 0.3, spatialWidth: 0.7,
-  crossoverEnabled: false, crossoverFreq: 300,
+  crossoverEnabled: false, crossoverMode: 'low', crossoverFreq: 300,
   pinkNoiseEnabled: false, pinkNoiseMix: 0.03, pinkNoiseModulate: false,
   noiseType: 'pink'
 };
@@ -55,6 +56,8 @@ const els = {
   spatialControls: document.getElementById('spatialControls'),
   crossoverEnabled: document.getElementById('crossoverEnabled'),
   crossoverFreq: document.getElementById('crossoverFreq'),
+  crossoverModeLow: document.getElementById('crossoverModeLow'),
+  crossoverModeHigh: document.getElementById('crossoverModeHigh'),
   crossoverFreqValue: document.getElementById('crossoverFreqValue'),
   crossoverControls: document.getElementById('crossoverControls'),
   pinkNoiseEnabled: document.getElementById('pinkNoiseEnabled'),
@@ -93,6 +96,7 @@ function getParams() {
     spatialSpeed: parseFloat(els.spatialSpeed.value),
     spatialWidth: parseInt(els.spatialWidth.value) / 100,
     crossoverEnabled: els.crossoverEnabled.checked,
+    crossoverMode: crossoverMode,
     crossoverFreq: parseInt(els.crossoverFreq.value),
     pinkNoiseEnabled: els.pinkNoiseEnabled.checked,
     pinkNoiseMix: parseFloat(els.pinkNoiseMix.value) / 100,
@@ -126,6 +130,11 @@ function updateCrossoverControls() {
   }
 }
 
+function updateCrossoverModeUI() {
+  els.crossoverModeLow.classList.toggle('active', crossoverMode === 'low');
+  els.crossoverModeHigh.classList.toggle('active', crossoverMode === 'high');
+}
+
 function updatePinkNoiseControls() {
   if (els.pinkNoiseEnabled.checked) {
     els.pinkNoiseControls.classList.add('enabled');
@@ -151,6 +160,7 @@ function applyPreset(preset) {
   updateDisplay();
   updateSpatialControls();
   updateCrossoverControls();
+  updateCrossoverModeUI();
   updatePinkNoiseControls();
   sendParams();
 }
@@ -226,6 +236,7 @@ async function saveSettings() {
     spatialSpeed: els.spatialSpeed.value,
     spatialWidth: els.spatialWidth.value,
     crossoverEnabled: els.crossoverEnabled.checked,
+    crossoverMode: crossoverMode,
     crossoverFreq: els.crossoverFreq.value,
     pinkNoiseEnabled: els.pinkNoiseEnabled.checked,
     pinkNoiseMix: els.pinkNoiseMix.value,
@@ -245,6 +256,7 @@ async function loadSettings() {
     els.spatialSpeed.value = s.spatialSpeed || 0.3;
     els.spatialWidth.value = s.spatialWidth || 70;
     els.crossoverEnabled.checked = s.crossoverEnabled || false;
+    crossoverMode = s.crossoverMode || 'low';
     els.crossoverFreq.value = s.crossoverFreq || 300;
     els.pinkNoiseEnabled.checked = s.pinkNoiseEnabled || false;
     els.pinkNoiseMix.value = s.pinkNoiseMix || 3;
@@ -254,6 +266,7 @@ async function loadSettings() {
   updateDisplay();
   updateSpatialControls();
   updateCrossoverControls();
+  updateCrossoverModeUI();
   updatePinkNoiseControls();
 }
 
@@ -497,6 +510,18 @@ els.spatialWidth.addEventListener('input', () => { updateDisplay(); sendParams()
 
 els.crossoverEnabled.addEventListener('change', () => {
   updateCrossoverControls();
+  sendParams();
+});
+
+els.crossoverModeLow.addEventListener('click', () => {
+  crossoverMode = 'low';
+  updateCrossoverModeUI();
+  sendParams();
+});
+
+els.crossoverModeHigh.addEventListener('click', () => {
+  crossoverMode = 'high';
+  updateCrossoverModeUI();
   sendParams();
 });
 

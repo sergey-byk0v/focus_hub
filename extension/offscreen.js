@@ -28,6 +28,7 @@ const DEFAULT_PARAMS = {
   spatialSpeed: 0.3,
   spatialWidth: 0.7,
   crossoverEnabled: false,
+  crossoverMode: 'low',
   crossoverFreq: 300,
   pinkNoiseEnabled: false,
   pinkNoiseMix: 0.03,
@@ -165,8 +166,13 @@ function rewireGraph() {
     sourceNode.connect(highPass);
     lowPass.connect(lowPass2);
     highPass.connect(highPass2);
-    lowPass2.connect(carrierGain);
-    highPass2.connect(dryGain);
+    if (params.crossoverMode === 'low') {
+      lowPass2.connect(carrierGain);
+      highPass2.connect(dryGain);
+    } else {
+      lowPass2.connect(dryGain);
+      highPass2.connect(carrierGain);
+    }
     carrierGain.connect(summer);
     dryGain.connect(summer);
     summer.connect(spatialPanner);
@@ -295,6 +301,7 @@ function startSpatialLFO() {
 
 function updateParams(newParams) {
   const prevCrossover = params.crossoverEnabled;
+  const prevCrossoverMode = params.crossoverMode;
   const prevSpatial = params.spatialEnabled;
   const prevPinkNoise = params.pinkNoiseEnabled;
   const prevNoiseType = params.noiseType;
@@ -326,7 +333,7 @@ function updateParams(newParams) {
       }
     }
 
-    if (params.crossoverEnabled !== prevCrossover) {
+    if (params.crossoverEnabled !== prevCrossover || (params.crossoverEnabled && params.crossoverMode !== prevCrossoverMode)) {
       crossoverEnabled = params.crossoverEnabled;
       rewireGraph();
     }
