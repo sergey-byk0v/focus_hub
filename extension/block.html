@@ -32,7 +32,13 @@
       <p class="subtitle"><strong id="blocked-site-name"></strong> is blocked</p>
       <button id="close-btn">Close Tab</button>
     </div>
-  <div id="statsSection" class="stats-section">
+    <div id="suggestions-ui" style="display:none">
+      <p class="suggestions-title">Alternatives for "<span id="suggested-tag"></span>"</p>
+      <p class="suggestions-subtitle">Maybe try one of these instead:</p>
+      <div id="suggestions-list"></div>
+      <button id="continue-btn" class="proceed-btn">Continue to site</button>
+    </div>
+    <div id="statsSection" class="stats-section">
       <button id="statsToggle" class="stats-toggle">Show Statistics ▸</button>
       <div id="statsContent" class="stats-content" style="display:none">
         <div class="stats-header">

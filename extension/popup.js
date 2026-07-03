@@ -10,9 +10,12 @@ let listMode = 'blocklist';
 let blockingMode = 'reason';
 let crossoverMode = 'low';
 let enabledTabs = ['timer', 'modulation', 'block', 'themes'];
+let showSuggestions = true;
+
 
 const INITIALLY_UNLOCKED = ['dark'];
 let unlockedThemeIds = new Set(INITIALLY_UNLOCKED);
+const NORMAL_THEMES = THEMES.filter(t => !t.secret);
 let cooldownUntil = 0;
 let cooldownInterval = null;
 let selectedThemeId = null;
@@ -661,7 +664,9 @@ async function loadTabVisibility() {
 
 function renderThemes() {
   els.themeGrid.innerHTML = "";
+  const allNormalUnlocked = NORMAL_THEMES.every(t => unlockedThemeIds.has(t.id));
   THEMES.forEach(theme => {
+    if (theme.secret && !allNormalUnlocked) return;
     const isUnlocked = unlockedThemeIds.has(theme.id);
     const btn = document.createElement("button");
     btn.className = "theme-btn";
@@ -721,11 +726,21 @@ async function loadThemeUnlocks() {
 
   const timeResult = await chrome.storage.local.get("nextUnlockTime");
   cooldownUntil = timeResult.nextUnlockTime || 0;
+  if (cooldownUntil > 0) {
+    cooldownUntil = 0;
+    await chrome.storage.local.set({ nextUnlockTime: 0 });
+  }
 }
 
 function updateUnlockButton() {
-  const lockedCount = THEMES.length - unlockedThemeIds.size;
-  if (lockedCount === 0) {
+  const normalLockedCount = NORMAL_THEMES.filter(t => !unlockedThemeIds.has(t.id)).length;
+  if (normalLockedCount === 0) {
+    const secretThemes = THEMES.filter(t => t.secret && !unlockedThemeIds.has(t.id));
+    if (secretThemes.length > 0) {
+      secretThemes.forEach(t => unlockedThemeIds.add(t.id));
+      chrome.storage.local.set({ themeUnlocks: [...unlockedThemeIds] });
+      renderThemes();
+    }
     els.unlockBtn.disabled = true;
     els.unlockBtn.className = "unlock-btn all-unlocked";
     els.unlockBtn.textContent = "All themes unlocked!";
@@ -766,7 +781,7 @@ function startCooldown(seconds) {
 
 
 function unlockRandomTheme() {
-  const lockedIds = THEMES.filter(t => !unlockedThemeIds.has(t.id)).map(t => t.id);
+  const lockedIds = THEMES.filter(t => !t.secret && !unlockedThemeIds.has(t.id)).map(t => t.id);
   if (lockedIds.length === 0) {
     updateUnlockButton();
     return;
@@ -776,12 +791,42 @@ function unlockRandomTheme() {
   unlockedThemeIds.add(randomId);
   chrome.storage.local.set({ themeUnlocks: [...unlockedThemeIds] });
 
-  startCooldown(43200);
+  startCooldown(0);
   renderThemes();
   updateUnlockButton();
 }
 
 els.unlockBtn.addEventListener("click", unlockRandomTheme);
+
+var suggestionsToggle = document.getElementById('showSuggestions');
+if (suggestionsToggle) {
+  suggestionsToggle.addEventListener('change', function() {
+    showSuggestions = suggestionsToggle.checked;
+    chrome.storage.local.set({ showSuggestions: showSuggestions });
+  });
+}
+
+var suggestionsEditor = document.getElementById('suggestionsEditor');
+var suggestionsSaveBtn = document.getElementById('suggestionsSaveBtn');
+var suggestionsRestoreBtn = document.getElementById('suggestionsRestoreBtn');
+
+if (suggestionsSaveBtn && suggestionsEditor) {
+  suggestionsSaveBtn.addEventListener('click', async function () {
+    var content = suggestionsEditor.value;
+    await chrome.storage.local.set({ suggestionsContent: content });
+  });
+}
+
+if (suggestionsRestoreBtn && suggestionsEditor) {
+  suggestionsRestoreBtn.addEventListener('click', async function () {
+    try {
+      var resp = await fetch(chrome.runtime.getURL('suggestions.md'));
+      var md = await resp.text();
+      suggestionsEditor.value = md;
+      await chrome.storage.local.set({ suggestionsContent: md });
+    } catch (_) {}
+  });
+}
 
 document.querySelectorAll('.tab-toggle').forEach(function(cb) {
   cb.addEventListener('change', function() {
@@ -815,6 +860,14 @@ chrome.runtime.onMessage.addListener((message) => {
   await loadTheme();
   await loadThemeUnlocks();
   await loadTabVisibility();
+  var ssResult = await chrome.storage.local.get('showSuggestions');
+  showSuggestions = ssResult.showSuggestions !== undefined ? ssResult.showSuggestions : true;
+  if (suggestionsToggle) suggestionsToggle.checked = showSuggestions;
+  var scResult = await chrome.storage.local.get('suggestionsContent');
+  if (!scResult.suggestionsContent) {
+    try { var resp = await fetch(chrome.runtime.getURL('suggestions.md')); scResult.suggestionsContent = await resp.text(); } catch (_) {}
+  }
+  if (suggestionsEditor) suggestionsEditor.value = scResult.suggestionsContent || '';
   renderThemes();
   updateUnlockButton();
 })();

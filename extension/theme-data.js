@@ -53,6 +53,15 @@ const BASE_PALETTES = {
     '--accent': '#00e5ff', '--accent-hover': '#00b8d4',
     '--danger': '#ff4081', '--danger-hover': '#f50057', '--success': '#69f0ae', '--white': '#fff',
   },
+  golden: {
+    '--bg': '#1a0e00', '--text-on-accent': '#1a0e00',
+    '--surface': '#2a1800', '--surface-alt': '#3a2200', '--surface-hover': '#4a2c00',
+    '--text': '#ffcc00', '--text-secondary': '#dba500', '--text-muted': '#b88000',
+    '--text-label': '#ffcc00', '--text-subtle': '#b88000', '--text-site': '#dba500',
+    '--border': '#5a3e00', '--border-light': '#4a2c00', '--border-subtle': '#3a2200',
+    '--accent': '#f0a500', '--accent-hover': '#d49000',
+    '--danger': '#ff6347', '--danger-hover': '#e5533a', '--success': '#7cfc00', '--white': '#fff',
+  },
 };
 
 const THEMES = [
@@ -89,8 +98,9 @@ const THEMES = [
   { id: 'vib-cyan',    name: 'Cyan',      color: '#00e5ff', base: 'vibrant', accent: '#00e5ff', accentHover: '#00b8d4' },
   { id: 'vib-pink',    name: 'Pink',      color: '#ff4081', base: 'vibrant', accent: '#ff4081', accentHover: '#f50057' },
   { id: 'vib-green',   name: 'Green',     color: '#69f0ae', base: 'vibrant', accent: '#69f0ae', accentHover: '#00e676' },
-  { id: 'vib-gold',    name: 'Gold',      color: '#ffd740', base: 'vibrant', accent: '#ffd740', accentHover: '#ffab00' },
+  { id: 'vib-yellow',    name: 'Yellow',    color: '#ffd740', base: 'vibrant', accent: '#ffd740', accentHover: '#ffab00' },
   { id: 'vib-magenta', name: 'Magenta',   color: '#e040fb', base: 'vibrant', accent: '#e040fb', accentHover: '#d500f9' },
+  { id: 'secret-master', name: '👑 Master', color: '#f0a500', base: 'golden', accent: '#f0a500', accentHover: '#d49000', secret: true },
 ];
 
 function applyThemeById(themeId) {

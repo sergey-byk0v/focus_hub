@@ -288,3 +288,77 @@ body {
 #close-btn:hover {
   background: var(--accent-hover);
 }
+
+#suggestions-ui {
+  text-align: left;
+}
+
+.suggestions-title {
+  font-size: 1.1rem;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.suggestions-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+#suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.suggestion-item {
+  display: block;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.suggestion-item:hover {
+  border-color: var(--accent);
+  color: var(--text);
+  background: var(--surface);
+}
+
+.suggestion-item.link {
+  color: var(--accent);
+}
+
+.suggestion-item.link:hover {
+  color: var(--accent-hover);
+}
+
+.suggestion-item.text {
+  cursor: default;
+}
+
+#continue-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--accent);
+  color: var(--white);
+  transition: background 0.2s;
+  font-family: inherit;
+}
+
+#continue-btn:hover {
+  background: var(--accent-hover);
+}
+

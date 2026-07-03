@@ -21,7 +21,14 @@
   const blockedSiteName = document.getElementById('blocked-site-name');
   const closeBtn = document.getElementById('close-btn');
 
+  const suggestionsUi = document.getElementById('suggestions-ui');
+  const suggestionsList = document.getElementById('suggestions-list');
+  const suggestedTagEl = document.getElementById('suggested-tag');
+  const continueBtn = document.getElementById('continue-btn');
+
   var selectedTag = null;
+  var suggestionsMap = null;
+  var showSuggestions = true;
 
   var siteDisplay = 'a site';
   if (targetUrl) {
@@ -31,6 +38,22 @@
   }
   siteNameEl.textContent = siteDisplay;
   blockedSiteName.textContent = siteDisplay;
+
+  (async () => {
+    var ssResult = await chrome.storage.local.get({ showSuggestions: true });
+    if (ssResult.showSuggestions === false) showSuggestions = false;
+    if (showSuggestions) {
+      var scResult = await chrome.storage.local.get('suggestionsContent');
+      var md = scResult.suggestionsContent;
+      if (!md) {
+        try {
+          var resp = await fetch(chrome.runtime.getURL('suggestions.md'));
+          md = await resp.text();
+        } catch (_) {}
+      }
+      if (md) suggestionsMap = parseSuggestions(md);
+    }
+  })();
 
   // ===== Block mode =====
   if (mode === 'block') {
@@ -142,10 +165,16 @@
 
     await chrome.storage.local.set({ entries });
 
-    var { approved } = await chrome.storage.session.get({ approved: {} });
-    approved[String(tabId)] = targetUrl;
-    await chrome.storage.session.set({ approved });
+    await chrome.runtime.sendMessage({
+      type: 'APPROVE_TAB',
+      tabId: tabId,
+      url: targetUrl
+    });
 
+    if (showSuggestions && suggestionsMap && suggestionsMap[tag.toLowerCase()]) {
+      showSuggestionsForTag(tag);
+      return;
+    }
     chrome.tabs.update(tabId, { url: targetUrl });
   }
 
@@ -174,6 +203,58 @@
     return String(str).replace(/"/g, '""');
   }
 
+  // ===== Suggestions =====
+
+  function parseSuggestions(md) {
+    var map = {};
+    var lines = md.split('\n');
+    var currentTag = null;
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      var headingMatch = line.match(/^#\s+(.+)/);
+      if (headingMatch) {
+        currentTag = headingMatch[1].toLowerCase();
+        map[currentTag] = [];
+        continue;
+      }
+      var itemMatch = line.match(/^-\s+(.+)/);
+      if (itemMatch && currentTag) {
+        map[currentTag].push(itemMatch[1]);
+      }
+    }
+    return map;
+  }
+
+  function showSuggestionsForTag(tag) {
+    reasonUi.style.display = 'none';
+    suggestedTagEl.textContent = tag;
+    suggestionsList.innerHTML = '';
+    var items = suggestionsMap[tag.toLowerCase()];
+    if (!items) return;
+    items.forEach(function (item) {
+      var el = document.createElement('a');
+      el.className = 'suggestion-item';
+      var linkMatch = item.match(/^\[(.+)\]\((.+)\)$/);
+      if (linkMatch) {
+        el.href = linkMatch[2];
+        el.target = '_blank';
+        el.rel = 'noopener';
+        el.textContent = linkMatch[1];
+        el.classList.add('link');
+      } else {
+        el.href = '#';
+        el.textContent = item;
+        el.classList.add('text');
+        el.addEventListener('click', function (e) { e.preventDefault(); });
+      }
+      suggestionsList.appendChild(el);
+    });
+    suggestionsUi.style.display = 'block';
+  }
+
+  continueBtn.addEventListener('click', function () {
+    chrome.tabs.update(tabId, { url: targetUrl });
+  });
 
   // ===== Statistics =====
   const statsToggle = document.getElementById('statsToggle');

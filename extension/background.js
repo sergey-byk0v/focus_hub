@@ -57,6 +57,7 @@ let blocklistDomains = [];
 let whitelistDomains = [];
 let listMode = 'blocklist';
 let blockingMode = 'reason';
+let approvedTabs = {};
 
 async function loadBlockerState() {
   const result = await chrome.storage.local.get(['blocklistDomains', 'whitelistDomains', 'listMode', 'blockingMode']);
@@ -90,12 +91,10 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
     }
     if (!shouldBlock) return;
 
-    const { approved } = await chrome.storage.session.get({ approved: {} });
     const key = String(details.tabId);
 
-    if (approved[key] === details.url) {
-      delete approved[key];
-      await chrome.storage.session.set({ approved });
+    if (approvedTabs[key] === details.url) {
+      delete approvedTabs[key];
       return;
     }
 
@@ -227,6 +226,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'SET_BLOCKING_MODE') {
     blockingMode = message.mode;
     chrome.storage.local.set({ blockingMode });
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === 'APPROVE_TAB') {
+    approvedTabs[String(message.tabId)] = message.url;
     sendResponse({ success: true });
     return true;
   }
