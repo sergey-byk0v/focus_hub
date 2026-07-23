@@ -791,7 +791,7 @@ function unlockRandomTheme() {
   unlockedThemeIds.add(randomId);
   chrome.storage.local.set({ themeUnlocks: [...unlockedThemeIds] });
 
-  startCooldown(0);
+  startCooldown(43200);
   renderThemes();
   updateUnlockButton();
 }

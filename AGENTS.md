@@ -148,7 +148,8 @@ const params = {
 
 ## Block Page (block.html)
 - Reason tags: Waiting, Bored, Procrastination, Avoiding something, Free-time chill, Work/Study, On background, Other
-- Countdown: 10 seconds before "Proceed" enables
+- Countdown: 6 seconds before "Proceed" enables
+- Continue countdown: 6 seconds after suggestions render before "Continue to site" enables
 - Entry model: `{ url, reason, tag, customText, timestamp, date }`
 - Stats: collapsible bar chart, bars sorted by count descending, Export CSV
 - `tag` from pre-upgrade entries defaults to `'Other'`
@@ -184,14 +185,57 @@ const params = {
 - Plain text items are inert (click does nothing)
 - Missing/empty sections cause that tag to skip suggestions (no error)
 
+### Rendered Markdown
+- `renderMarkdown()` converts raw markdown per section into rich HTML
+- Supports: `## subheadings`, `> blockquotes`, `` `code blocks` ``, `![images](src)`, `**bold**`, `*italic*`
+- Consecutive `- ` lines are grouped into `<ul>` lists
+- `inlineMd()` applies inline formatting within any line
+- `escHtml()` / `escAttr()` sanitize user content
+
 ## Editor (popup Settings > Block Page)
 - `#suggestionsEditor` — monospace textarea (160px height), shows bundled content on first open
 - `#suggestionsSaveBtn` — saves editor content to `chrome.storage.local`
 - `#suggestionsRestoreBtn` — re-fetches bundled `suggestions.md` and overwrites storage
 
 ## Version
-- Current: `1.0.1` (manifest.json)
+- Current: `1.0.3` (manifest.json)
 - Release zips in `versions/` folder
+
+## Release & Update Workflow
+
+Steps to prepare and share a new release:
+
+1. **Bump version** in `extension/manifest.json` (patch bump for fixes, minor for features)
+2. **Commit all changes**:
+   ```sh
+   git add extension/ AGENTS.md
+   git commit -m "Brief description of changes"
+   ```
+3. **Update AGENTS.md** to reflect the new version and any workflow changes
+4. **Create release zip** — zip the entire `extension/` folder:
+   ```sh
+   python3 -c "import shutil; shutil.make_archive('versions/focus_hub_v_0_0_X', 'zip', 'extension')"
+   ```
+   Name follows sequence: `focus_hub_v_0_0_3.zip`, `focus_hub_v_0_0_4.zip`, etc.
+5. **Stage and commit the zip + AGENTS.md**:
+   ```sh
+   git add versions/ AGENTS.md
+   git commit -m "Release v_0_0_X"
+   ```
+6. **Push to remote**:
+   ```sh
+   git push
+   ```
+7. **Load into Chrome for testing** (if not already loaded):
+   - Go to `chrome://extensions/`
+   - Enable Developer Mode
+   - Click "Load unpacked" then select `extension/` folder
+
+### Notes
+- Always commit the extension code before creating the zip
+- The `versions/` folder is version-controlled so release zips are tracked
+- Test in Chrome before pushing — load unpacked after each change
+- AGENTS.md should be updated to reflect the new version before committing
 
 ## Gotchas & Pitfalls
 

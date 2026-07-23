@@ -361,4 +361,83 @@ body {
 #continue-btn:hover {
   background: var(--accent-hover);
 }
+#continue-btn:disabled {
+  background: var(--surface-disabled);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
 
+
+#suggestions-list h2 {
+  font-size: 1.05rem;
+  color: var(--text);
+  margin: 12px 0 6px;
+}
+#suggestions-list h3 {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin: 8px 0 4px;
+}
+#suggestions-list p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 6px 0;
+}
+#suggestions-list ul {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+#suggestions-list li {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 3px 0;
+}
+#suggestions-list blockquote {
+  border-left: 3px solid var(--accent);
+  padding: 6px 12px;
+  margin: 8px 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  font-style: italic;
+  background: var(--bg);
+  border-radius: 4px;
+}
+#suggestions-list pre {
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 8px 0;
+  overflow-x: auto;
+}
+#suggestions-list code {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.82rem;
+  color: var(--accent);
+}
+#suggestions-list pre code {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+#suggestions-list img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 8px 0;
+  display: block;
+}
+#suggestions-list a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+#suggestions-list a:hover {
+  color: var(--accent-hover);
+}
+#suggestions-list strong {
+  color: var(--text);
+  font-weight: 600;
+}
+#suggestions-list em {
+  color: var(--text-secondary);
+}

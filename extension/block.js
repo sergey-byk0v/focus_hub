@@ -104,7 +104,7 @@
   }
 
   // ===== Reason mode (default) =====
-  const COUNTDOWN_SECONDS = 10;
+  const COUNTDOWN_SECONDS = 6;
   var countdown = COUNTDOWN_SECONDS;
   var countdownDone = false;
 
@@ -209,47 +209,111 @@
     var map = {};
     var lines = md.split('\n');
     var currentTag = null;
+    var currentLines = [];
     for (var i = 0; i < lines.length; i++) {
-      var line = lines[i].trim();
-      var headingMatch = line.match(/^#\s+(.+)/);
-      if (headingMatch) {
-        currentTag = headingMatch[1].toLowerCase();
-        map[currentTag] = [];
-        continue;
-      }
-      var itemMatch = line.match(/^-\s+(.+)/);
-      if (itemMatch && currentTag) {
-        map[currentTag].push(itemMatch[1]);
+      var m = lines[i].match(/^#\s+(.+)/);
+      if (m) {
+        if (currentTag) map[currentTag] = currentLines.join('\n').trim();
+        currentTag = m[1].toLowerCase();
+        currentLines = [];
+      } else if (currentTag) {
+        currentLines.push(lines[i]);
       }
     }
+    if (currentTag) map[currentTag] = currentLines.join('\n').trim();
     return map;
+  }
+
+  function renderMarkdown(raw) {
+    if (!raw) return '';
+    var lines = raw.split('\n');
+    var html = '';
+    var inList = false;
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      var trimmed = line.trim();
+      if (!trimmed) {
+        if (inList) { html += '</ul>'; inList = false; }
+        continue;
+      }
+      if (/^###\s/.test(trimmed)) {
+        if (inList) { html += '</ul>'; inList = false; }
+        html += '<h3>' + inlineMd(trimmed.replace(/^###\s+/, '')) + '</h3>';
+      } else if (/^##\s/.test(trimmed)) {
+        if (inList) { html += '</ul>'; inList = false; }
+        html += '<h2>' + inlineMd(trimmed.replace(/^##\s+/, '')) + '</h2>';
+      } else if (/^#\s/.test(trimmed)) {
+        if (inList) { html += '</ul>'; inList = false; }
+        html += '<h2>' + inlineMd(trimmed.replace(/^#\s+/, '')) + '</h2>';
+      } else if (/^>\s/.test(trimmed)) {
+        if (inList) { html += '</ul>'; inList = false; }
+        html += '<blockquote>' + inlineMd(trimmed.replace(/^>\s+/, '')) + '</blockquote>';
+      } else if (/^-\s/.test(trimmed)) {
+        if (!inList) { html += '<ul>'; inList = true; }
+        html += '<li>' + inlineMd(trimmed.replace(/^-\s+/, '')) + '</li>';
+      } else if (/^```/.test(trimmed)) {
+        if (inList) { html += '</ul>'; inList = false; }
+        var codeLines = [];
+        i++;
+        while (i < lines.length && !/^```/.test(lines[i])) {
+          codeLines.push(lines[i]);
+          i++;
+        }
+        html += '<pre><code>' + escHtml(codeLines.join('\n')) + '</code></pre>';
+      } else if (/^!\[.*\]\(.*\)/.test(trimmed)) {
+        if (inList) { html += '</ul>'; inList = false; }
+        var imgMatch = trimmed.match(/^!\[(.*)\]\((.*)\)/);
+        if (imgMatch) html += '<img src="' + escAttr(imgMatch[2]) + '" alt="' + escAttr(imgMatch[1]) + '">';
+      } else {
+        if (inList) { html += '</ul>'; inList = false; }
+        html += '<p>' + inlineMd(trimmed) + '</p>';
+      }
+    }
+    if (inList) html += '</ul>';
+    return html;
+  }
+
+  function inlineMd(text) {
+    text = escHtml(text);
+    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+    text = text.replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1">');
+    text = text.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    return text;
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function escAttr(str) {
+    return String(str).replace(/"/g, '&quot;').replace(/&/g, '&amp;');
   }
 
   function showSuggestionsForTag(tag) {
     reasonUi.style.display = 'none';
     suggestedTagEl.textContent = tag;
-    suggestionsList.innerHTML = '';
-    var items = suggestionsMap[tag.toLowerCase()];
-    if (!items) return;
-    items.forEach(function (item) {
-      var el = document.createElement('a');
-      el.className = 'suggestion-item';
-      var linkMatch = item.match(/^\[(.+)\]\((.+)\)$/);
-      if (linkMatch) {
-        el.href = linkMatch[2];
-        el.target = '_blank';
-        el.rel = 'noopener';
-        el.textContent = linkMatch[1];
-        el.classList.add('link');
-      } else {
-        el.href = '#';
-        el.textContent = item;
-        el.classList.add('text');
-        el.addEventListener('click', function (e) { e.preventDefault(); });
-      }
-      suggestionsList.appendChild(el);
-    });
+    var raw = suggestionsMap[tag.toLowerCase()];
+    suggestionsList.innerHTML = raw ? renderMarkdown(raw) : '';
     suggestionsUi.style.display = 'block';
+    startContinueCountdown(6);
+  }
+
+  function startContinueCountdown(seconds) {
+    continueBtn.disabled = true;
+    var remaining = seconds;
+    continueBtn.textContent = 'Continue in ' + remaining + 's';
+    var interval = setInterval(function () {
+      remaining--;
+      if (remaining > 0) {
+        continueBtn.textContent = 'Continue in ' + remaining + 's';
+      } else {
+        clearInterval(interval);
+        continueBtn.disabled = false;
+        continueBtn.textContent = 'Continue to site';
+      }
+    }, 1000);
   }
 
   continueBtn.addEventListener('click', function () {
