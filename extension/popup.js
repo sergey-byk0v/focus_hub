@@ -42,7 +42,7 @@ const BUILTIN_PRESETS = [
 ];
 
 const els = {
-  status: document.getElementById('status'),
+  captureTarget: document.getElementById('captureTarget'),
   captureBtn: document.getElementById('captureBtn'),
   controls: document.getElementById('controls'),
   frequency: document.getElementById('frequency'),
@@ -276,16 +276,12 @@ async function loadSettings() {
 function setCapturing(state, tabId) {
   isCapturing = state;
   if (state) {
-    els.status.textContent = currentTabTitle;
-    els.status.className = 'status capturing';
-    els.captureBtn.textContent = 'Stop Capture';
+    els.captureTarget.textContent = currentTabTitle;
     els.captureBtn.className = 'stop';
     els.controls.classList.add('enabled');
     sendParams();
   } else {
-    els.status.textContent = 'Idle';
-    els.status.className = 'status idle';
-    els.captureBtn.textContent = 'Start Capture';
+    els.captureTarget.textContent = '';
     els.captureBtn.className = 'start';
     els.controls.classList.remove('enabled');
     currentTabTitle = '';
@@ -467,7 +463,7 @@ els.captureBtn.addEventListener('click', async () => {
     currentTabId = tabs[0].id;
 
     els.captureBtn.disabled = true;
-    els.captureBtn.textContent = 'Starting...';
+    els.captureTarget.textContent = 'Starting…';
 
     const response = await chrome.runtime.sendMessage({
       type: 'START_CAPTURE',
@@ -480,8 +476,7 @@ els.captureBtn.addEventListener('click', async () => {
       currentTabTitle = tabs[0].title;
       setCapturing(true, currentTabId);
     } else {
-      els.status.textContent = 'Error: ' + (response.error || 'Unknown');
-      els.status.className = 'status idle';
+      els.captureTarget.textContent = 'Error: ' + (response.error || 'Unknown');
     }
   }
 });
