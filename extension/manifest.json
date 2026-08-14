@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Focus Hub",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Focus tools: audio for focus, website blocking, and a daily planner.",
   "permissions": [
     "webNavigation",

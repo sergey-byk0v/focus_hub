@@ -412,6 +412,17 @@ body.dragging {
   padding: 0 2px;
 }
 
+.now-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--danger);
+  pointer-events: none;
+  z-index: 2;
+  display: none;
+}
+
 .slot {
   position: absolute;
   left: 42px;

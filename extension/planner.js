@@ -466,6 +466,10 @@
   let rangeStartH = 0;
   let rangeEndH = 24;
 
+  const nowLine = document.createElement('div');
+  nowLine.className = 'now-line';
+  timelineEl.appendChild(nowLine);
+
   function todayStr() {
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -497,6 +501,30 @@
     return day > 0 ? timelineEl.clientHeight / day : 0;
   }
 
+  function nowMinute() {
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  }
+
+  function updateNowLine() {
+    const m = nowMinute();
+    if (m >= rangeStartMin() && m < rangeEndMin()) {
+      nowLine.style.display = 'block';
+      nowLine.style.top = ((m - rangeStartMin()) * timelineScale()) + 'px';
+    } else {
+      nowLine.style.display = 'none';
+    }
+  }
+
+  function scheduleNowLine() {
+    const now = new Date();
+    const msToNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds() + 50;
+    setTimeout(function () {
+      updateNowLine();
+      setInterval(updateNowLine, 60000);
+    }, msToNextMinute);
+  }
+
   function renderTimeline() {
     const scale = timelineScale();
 
@@ -524,6 +552,7 @@
     });
     renderOverlapLayer(scale);
     clearSlotsBtn.disabled = todaySlots().length === 0;
+    updateNowLine();
   }
 
   function renderOverlapLayer(scale) {
@@ -1082,4 +1111,5 @@
     ro.observe(timelineScroll);
   }
   loadState();
+  scheduleNowLine();
 })();
