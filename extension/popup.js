@@ -88,6 +88,7 @@ const els = {
   modeWhitelist: document.getElementById('modeWhitelist'),
   themeGrid: document.getElementById('themeGrid'),
   unlockBtn: document.getElementById('unlockBtn'),
+  plannerBtn: document.getElementById('plannerBtn'),
 };
 
 function getParams() {
@@ -479,6 +480,10 @@ els.captureBtn.addEventListener('click', async () => {
       els.captureTarget.textContent = 'Error: ' + (response.error || 'Unknown');
     }
   }
+});
+
+els.plannerBtn.addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('planner.html') });
 });
 
 els.frequency.addEventListener('input', () => { updateDisplay(); sendParams(); });

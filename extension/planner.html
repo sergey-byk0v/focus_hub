@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Focus Hub — Daily Planner</title>
+  <link rel="stylesheet" href="planner.css">
+</head>
+<body>
+  <div id="app">
+    <aside id="timeline-panel">
+      <header id="timeline-header">
+        <div class="range-control">
+          <span>From</span>
+          <div class="stepper">
+            <button class="stepper-btn" type="button" data-dir="-1" tabindex="-1" aria-label="Decrease">&#8722;</button>
+            <input id="timeline-from" type="text" min="0" max="23" step="1" value="0" inputmode="numeric">
+            <button class="stepper-btn" type="button" data-dir="1" tabindex="-1" aria-label="Increase">+</button>
+          </div>
+          <span>To</span>
+          <div class="stepper">
+            <button class="stepper-btn" type="button" data-dir="-1" tabindex="-1" aria-label="Decrease">&#8722;</button>
+            <input id="timeline-to" type="text" min="1" max="24" step="1" value="24" inputmode="numeric">
+            <button class="stepper-btn" type="button" data-dir="1" tabindex="-1" aria-label="Increase">+</button>
+          </div>
+        </div>
+        <button id="clear-slots-btn" type="button">Clear all</button>
+      </header>
+      <div id="timeline-scroll">
+        <div id="timeline">
+          <div id="hour-axis"></div>
+          <div id="slot-layer"></div>
+        </div>
+      </div>
+    </aside>
+    <div id="divider" title="Drag to resize"></div>
+    <aside id="cards-panel">
+      <header id="cards-header">
+        <h2>Tasks</h2>
+      </header>
+      <div id="card-deck"></div>
+    </aside>
+  </div>
+  <script src="theme-data.js"></script>
+  <script src="planner.js"></script>
+</body>
+</html>

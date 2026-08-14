@@ -1,0 +1,609 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #2a2a2a;
+  --text-on-accent: #2a2a2a;
+  --surface: #333;
+  --surface-alt: #383838;
+  --surface-hover: #4a4a4a;
+  --text: #e0e0e0;
+  --text-secondary: #b0b0b0;
+  --text-muted: #888;
+  --text-label: #bbb;
+  --text-subtle: #999;
+  --text-site: #ccc;
+  --border: #555;
+  --border-light: #444;
+  --border-subtle: #3a3a3a;
+  --accent: #b0b0b0;
+  --accent-hover: #909090;
+  --danger: #ff4757;
+  --danger-hover: #e63946;
+  --success: #90ee90;
+  --white: #fff;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+#app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#timeline-panel {
+  flex: 0 0 20%;
+  min-width: max-content;
+  display: flex;
+  flex-direction: column;
+}
+
+#divider {
+  flex-shrink: 0;
+  width: 6px;
+  cursor: col-resize;
+  background: var(--border-light);
+  transition: background 0.15s;
+  touch-action: none;
+  position: relative;
+  z-index: 10;
+}
+
+#divider:hover,
+#divider.active {
+  background: var(--accent);
+}
+
+#cards-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#timeline-header,
+#cards-header {
+  height: 52px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-light);
+  flex-shrink: 0;
+}
+
+#timeline-header h1,
+#cards-header h2 {
+  font-size: 17px;
+  color: var(--text-label);
+}
+
+#timeline-scroll {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+  scrollbar-width: none;
+}
+
+#timeline-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+#timeline {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  user-select: none;
+}
+
+#hour-axis {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  pointer-events: none;
+}
+
+#slot-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+#card-deck {
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 14px;
+}
+
+.card-deck-inner {
+  position: relative;
+}
+
+
+
+.card {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  min-height: 120px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: grab;
+}
+
+.color-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+.card-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: bold;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: text;
+}
+
+.card-name-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 2px 4px;
+  background: var(--surface-alt);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.card-delete {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--danger);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-delete:hover {
+  background: var(--surface-hover);
+}
+
+.card-body {
+  flex: 1;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.task {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px;
+  border-radius: 4px;
+}
+
+.task:hover {
+  background: var(--surface-alt);
+}
+
+.task-check {
+  accent-color: var(--accent);
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.task-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--text);
+  cursor: text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task.done .task-text {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.task-delete {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.task:hover .task-delete {
+  opacity: 1;
+}
+
+.task-delete:hover {
+  color: var(--danger);
+  background: var(--surface-hover);
+}
+
+.task-edit-input {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 4px;
+  background: var(--surface-alt);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.add-task-row {
+  display: flex;
+  gap: 4px;
+}
+
+.add-task-input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px;
+  background: var(--surface-alt);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+.add-task-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.add-task-input::placeholder {
+  color: var(--text-muted);
+}
+
+.add-task-btn {
+  flex-shrink: 0;
+  width: 24px;
+  border: none;
+  background: var(--surface-alt);
+  color: var(--text-secondary);
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  border: 1px solid var(--border);
+}
+
+.add-task-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.add-card {
+  width: 100%;
+  min-height: 120px;
+  border: 1px dashed var(--border);
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 28px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.add-card:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+
+/* ==== Card reorder (drag & drop) ==== */
+
+.card.dragging {
+  opacity: 0.4;
+}
+
+.task.dragging {
+  opacity: 0.4;
+}
+
+.card.drop-target {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+#timeline.drop-target {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.dragging-ghost {
+  position: fixed;
+  pointer-events: none;
+  opacity: 0.85;
+  z-index: 1000;
+  cursor: grabbing;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+body.dragging {
+  user-select: none;
+}
+
+
+/* ==== Timeline slots ==== */
+
+.hour-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border-subtle);
+  pointer-events: none;
+}
+
+.hour-label {
+  position: absolute;
+  left: 6px;
+  top: 0;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--text-muted);
+  pointer-events: none;
+  z-index: 2;
+  background: var(--bg);
+  padding: 0 2px;
+}
+
+.slot {
+  position: absolute;
+  left: 42px;
+  right: 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  border-left: 3px solid var(--accent);
+  box-sizing: border-box;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text);
+  padding: 2px 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: flex-start;
+}
+
+.slot:hover {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+  border-color: var(--accent);
+}
+
+.slot.selected {
+  box-shadow: 0 0 0 2px var(--accent);
+  z-index: 1;
+}
+
+.slot-preview {
+  position: absolute;
+  left: 42px;
+  right: 8px;
+  border-radius: 6px;
+  border: 1px dashed var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.slot-overlap {
+  position: absolute;
+  left: 42px;
+  right: 8px;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--danger) 8%, transparent);
+  background-image: repeating-linear-gradient(45deg, var(--danger) 0 2px, transparent 2px 6px);
+}
+
+
+/* ==== Timeline range controls ==== */
+
+.range-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.range-control input {
+  width: 40px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  text-align: center;
+}
+
+.range-control input:focus {
+  outline: none;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  overflow: hidden;
+  height: 24px;
+}
+
+.stepper-btn {
+  width: 20px;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.stepper-btn:hover {
+  background: var(--accent);
+  color: var(--surface);
+}
+
+.stepper-btn:active {
+  filter: brightness(0.9);
+}
+
+#clear-slots-btn {
+  margin-left: auto;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, #ef5350 55%, transparent);
+  border-radius: 5px;
+  background: color-mix(in srgb, #ef5350 12%, transparent);
+  color: #ef5350;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+#clear-slots-btn:hover {
+  background: #ef5350;
+  color: #fff;
+}
+
+#clear-slots-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+#clear-slots-btn:disabled:hover {
+  background: color-mix(in srgb, #ef5350 12%, transparent);
+  color: #ef5350;
+}
+
+/* ==== Slot move / resize / naming ==== */
+
+.slot.dragging {
+  opacity: 0.4;
+}
+
+.slot-resize-handle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.slot-resize-top {
+  top: 0;
+}
+
+.slot-resize-bottom {
+  bottom: 0;
+}
+
+.slot:hover .slot-resize-handle,
+.slot.selected .slot-resize-handle {
+  opacity: 1;
+}
+
+.slot-resize-handle:hover {
+  background: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.slot-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot-name-input {
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+  padding: 0 2px;
+  background: var(--surface-alt);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  font-size: 11px;
+  box-sizing: border-box;
+}
+
+.slot-name-input:focus {
+  outline: none;
+}

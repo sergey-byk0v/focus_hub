@@ -20,6 +20,9 @@
 | `block.html` | Block page UI: reason tags, countdown, stats bar chart, CSV export |
 | `block.js` | Tag selection, entry saving, stats rendering, clearAll, CSV |
 | `block.css` | Block page styles |
+| `planner.html` | Planner page UI: two-panel layout (tasks deck + daily timeline), inline CSS |
+| `planner.js` | Planner logic: cards/tasks CRUD, timeline slots, drag & drop, zoom |
+| `planner.css` | Planner page styles |
 | `suggestions.md` | Default suggestions content (bundled, fallback if no custom content in storage) |
 
 ## Storage Keys (`chrome.storage.local`)
@@ -41,6 +44,11 @@
 | `blockedDomains` | `string[]` | background.js |
 | `whitelistDomains` | `string[]` | background.js |
 | `blockingMode` (in bg) | `"reason"\|"complete"` | background.js |
+| `plannerCards` | `Card[]` | planner.js |
+| `plannerSlots` | `Slot[]` | planner.js |
+| `plannerTimelineWidth` | `number` (px) | planner.js |
+| `plannerZoom` | `number` (0.5-2) | planner.js |
+| `plannerTimelineRange` | `{start:number, end:number}` | planner.js |
 
 **Note:** popup uses `blocklistSites`/`whitelistSites` (objects with `enabled`). background uses `blockedDomains`/`whitelistDomains` (flat string arrays). They are separate keys.
 
@@ -197,8 +205,42 @@ const params = {
 - `#suggestionsSaveBtn` — saves editor content to `chrome.storage.local`
 - `#suggestionsRestoreBtn` — re-fetches bundled `suggestions.md` and overwrites storage
 
+## Planner Page (planner.html)
+
+Opened from the popup top-row button via `chrome.tabs.create(chrome.runtime.getURL('planner.html'))`. Two-panel layout: **Tasks deck** (left) + **Timeline** (right). Applies the selected theme via `applyThemeById()` (loads `theme-data.js`).
+
+### Data Model
+```js
+Card = { id, name, color, tasks: Task[] }
+Task = { id, text, done }
+Slot = { id, date: 'YYYY-MM-DD', startMinute, endMinute, label }
+```
+- `slots` filtered to today's date (`todayStr()`) on render
+- Persisted under `plannerCards` / `plannerSlots`
+
+### Tasks Deck
+- Cards JS-packed into 4 columns (`DECK_COLS=4`, `DECK_GAP=12`) via `layoutDeck()` — heights measured with clones in a hidden `meas` div; `ResizeObserver` on `#card-deck` re-lays out on resize
+- Card: color chip cycles through `CARD_COLORS` (8 colors), dblclick inline rename, `.card-delete` button, add-task input, `.task` rows (checkbox `.task-check`, text, `.task-delete`)
+- Task rows: checkbox toggles `done`; dblclick (or click) inline-edits via `.task-edit-input`
+- New cards/tasks auto-open the name/text field
+
+### Timeline
+- `#timeline` = `#hour-axis` (labels + lines) + `#slot-layer` (slots); height 100%, spans From/To range
+- **Timeline stretch**: `timelineScale()` = `clientHeight / (rangeEndMin() - rangeStartMin())`; hour lines/labels/slots all scale by it; `timelineY()` = `rangeStartMin() + (clientY - rect.top) / zoom / scale`
+- **From/To**: header steppers (−/+) + text inputs (0–23 / 1–24, `start < end`), persisted `plannerTimelineRange`; steppers read bounds via `getAttribute('min'/'max')` (`.min` is empty on text inputs)
+- **Clear all**: red header button, single click, no confirm, disabled when today empty; removes today's slots
+- **Slots**: font-size 14px; click=30 min, drag≥15 min to draw; move 15-min snap; resize via top/bottom `.slot-resize-handle` (min 15 min); Delete/Backspace/Esc delete selected; dblclick inline rename; new slots auto-open name field
+- **Overlap hatch**: `renderOverlapLayer()` finds pairwise overlaps among today's slots, merges to maximal regions, paints `.slot-overlap` divs with a 45° diagonal hatch; `pointer-events:none; z-index:1`
+- **Zoom**: CSS `zoom` on `#app` (0.5–2), persisted `plannerZoom`; all viewport-px math divides by `zoom`
+
+### Drag & Drop
+- `DRAG_THRESHOLD=5`; ghost = fixed `#dragging-ghost` clone; `body.dragging` disables selection; `suppressClickUntil` blocks the post-drag synthetic click (300ms)
+- **Card reorder**: drag starts on `.card-header` only; drop on `.card` splices to its index, on `.add-card` moves to end
+- **Task row drag**: pointerdown on `.task` (skips `.task-check`/`.task-delete`/`.task-edit-input`) — same machinery
+- **Drop on timeline**: `#timeline` gets `.drop-target` accent ring + `.slot-preview` at snapped position; release → `commitTimelineDrop()` creates a 30-min slot labeled with the **task text** (or **card name**), clamped to the visible range, auto-selected. Independent copy — the task/card stays in the deck
+
 ## Version
-- Current: `1.0.3` (manifest.json)
+- Current: `1.1.0` (manifest.json)
 - Release zips in `versions/` folder
 
 ## Release & Update Workflow
@@ -216,7 +258,7 @@ Steps to prepare and share a new release:
    ```sh
    python3 -c "import shutil; shutil.make_archive('versions/focus_hub_v_0_0_X', 'zip', 'extension')"
    ```
-   Name follows sequence: `focus_hub_v_0_0_3.zip`, `focus_hub_v_0_0_4.zip`, etc.
+   Name follows sequence: `focus_hub_v_0_1_0.zip` (next release), `focus_hub_v_0_1_1.zip`, ... — `0_X_Y` where minor features bump `X`, patches bump `Y`.
 5. **Stage and commit the zip + AGENTS.md**:
    ```sh
    git add versions/ AGENTS.md
@@ -247,3 +289,6 @@ Steps to prepare and share a new release:
 6. **No remote code** — all audio is client-side, no external assets.
 7. **Tab approval race** — `chrome.storage.session.set` from block page context is not immediately visible to service worker context after Chrome ≥150 update. Fixed by using `APPROVE_TAB` runtime message + in-memory `approvedTabs` map in background.js.
 8. **suggestionsContent fallback** — block.js reads from `chrome.storage.local` first; if empty, fetches the bundled `suggestions.md`. The bundled file is never modified — custom content is stored separately.
+9. **Stepper bounds on text inputs** — From/To are `type="text"` (native number inputs broke rendering); stepper JS must read `getAttribute('min'/'max')` because `input.min` is empty on text inputs.
+10. **Overlap hatch needs two background properties** — the 45° hatch uses `background-color: color-mix(...)` separate from `background-image: repeating-linear-gradient(...)`; putting `color-mix` inside the gradient fails to paint.
+11. **Zoom-aware timeline math** — every viewport-px → minute conversion divides by `/ zoom / scale`; missing the `zoom` factor makes pointer positions drift when zoom ≠ 1.

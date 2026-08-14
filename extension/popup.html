@@ -111,7 +111,7 @@
       font-size: 14px;
       cursor: pointer;
       transition: all 0.2s;
-      margin-bottom: 8px;
+      margin-bottom: 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -149,6 +149,40 @@
     #captureBtn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+    .top-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .top-row #captureBtn {
+      flex: 1;
+      min-width: 0;
+      margin-bottom: 0;
+    }
+    #plannerBtn {
+      flex-shrink: 0;
+      width: 42px;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface-alt);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    #plannerBtn:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+    }
+    #plannerBtn svg {
+      width: 18px;
+      height: 18px;
+      pointer-events: none;
     }
 
     .controls { }
@@ -558,10 +592,15 @@
   <input type="radio" name="tab" id="tabThemes">
   <input type="radio" name="tab" id="tabSettings">
 
-  <button id="captureBtn" class="start">
-    <span class="capture-action">Capture</span>
-    <span id="captureTarget"></span>
-  </button>
+  <div class="top-row">
+    <button id="captureBtn" class="start">
+      <span class="capture-action">Capture</span>
+      <span id="captureTarget"></span>
+    </button>
+    <button id="plannerBtn" title="Open Daily Planner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg>
+    </button>
+  </div>
 
   <div class="tab-bar">
     <label for="tabTimer" class="tab-label" id="labelTimer">
