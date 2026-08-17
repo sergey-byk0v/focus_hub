@@ -225,7 +225,7 @@
     if (!items.length) return;
 
     const pad = 14;
-    const MIN_CARD_W = 180;
+    const MIN_CARD_W = 220;
     const cols = Math.max(1, Math.floor((cardDeck.clientWidth - pad * 2 + DECK_GAP) / (MIN_CARD_W + DECK_GAP)));
     const colW = Math.floor((cardDeck.clientWidth - pad * 2 - DECK_GAP * (cols - 1)) / cols);
 
