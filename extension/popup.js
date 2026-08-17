@@ -726,10 +726,6 @@ async function loadThemeUnlocks() {
 
   const timeResult = await chrome.storage.local.get("nextUnlockTime");
   cooldownUntil = timeResult.nextUnlockTime || 0;
-  if (cooldownUntil > 0) {
-    cooldownUntil = 0;
-    await chrome.storage.local.set({ nextUnlockTime: 0 });
-  }
 }
 
 function updateUnlockButton() {
@@ -768,6 +764,9 @@ function updateUnlockButton() {
     const m = Math.floor((totalSec % 3600) / 60);
     const s = totalSec % 60;
     els.unlockBtn.textContent = "Roll in " + String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+    if (!cooldownInterval) {
+      cooldownInterval = setInterval(updateUnlockButton, 200);
+    }
   }
 }
 
