@@ -1014,6 +1014,8 @@
     dragState.lastY = e.clientY;
 
     clearDropTarget();
+    dragState.dropTargetCardId = null;
+    dragState.dropBeforeTaskId = null;
     const el = document.elementFromPoint(e.clientX, e.clientY);
     if (el && el.closest('#timeline')) {
       timelineEl.classList.add('drop-target');
@@ -1022,6 +1024,38 @@
     } else {
       hideSlotPreview();
       dragState.target = null;
+
+      if (dragState.source === 'task') {
+        const taskRow = el ? el.closest('.task') : null;
+        if (taskRow) {
+          const cardEl = taskRow.closest('.card');
+          if (cardEl) {
+            const rect = taskRow.getBoundingClientRect();
+            const inTopHalf = (e.clientY - rect.top) < rect.height / 2;
+            taskRow.classList.add(inTopHalf ? 'drop-above' : 'drop-below');
+            dragState.dropTargetCardId = cardEl.dataset.id;
+            dragState.dropBeforeTaskId = inTopHalf ? taskRow.dataset.id : null;
+            if (!inTopHalf) {
+              const next = taskRow.nextElementSibling;
+              dragState.dropBeforeTaskId = next && next.classList.contains('task') ? next.dataset.id : null;
+            }
+            dragState.target = cardEl;
+            return;
+          }
+        }
+        const cardBody = el ? el.closest('.card-body') : null;
+        if (cardBody) {
+          const cardEl = cardBody.closest('.card');
+          if (cardEl) {
+            cardEl.classList.add('drop-target');
+            dragState.target = cardEl;
+            dragState.dropTargetCardId = cardEl.dataset.id;
+            dragState.dropBeforeTaskId = null;
+            return;
+          }
+        }
+      }
+
       const target = el ? el.closest('.card, .add-card') : null;
       if (target) {
         target.classList.add('drop-target');
@@ -1032,6 +1066,9 @@
 
   function clearDropTarget() {
     if (dragState && dragState.target) dragState.target.classList.remove('drop-target');
+    slotLayer.parentElement.querySelectorAll('.task.drop-above, .task.drop-below').forEach(function (t) {
+      t.classList.remove('drop-above', 'drop-below');
+    });
   }
 
   function updateSlotPreview() {
@@ -1074,6 +1111,27 @@
   function endDrag() {
     if (dragState.target === timelineEl) {
       commitTimelineDrop();
+    } else if (dragState.source === 'task' && dragState.dropTargetCardId) {
+      const fromCard = cards.find(function (c) { return c.id === dragState.cardId; });
+      const toCard = cards.find(function (c) { return c.id === dragState.dropTargetCardId; });
+      if (fromCard && toCard) {
+        const fromTasks = fromCard.tasks || [];
+        const fromIdx = fromTasks.findIndex(function (t) { return t.id === dragState.taskId; });
+        if (fromIdx !== -1) {
+          const movedTask = fromTasks.splice(fromIdx, 1)[0];
+          const toTasks = toCard.tasks || [];
+          let insertIdx = toTasks.length;
+          if (dragState.dropBeforeTaskId) {
+            const beforeIdx = toTasks.findIndex(function (t) { return t.id === dragState.dropBeforeTaskId; });
+            if (beforeIdx !== -1) insertIdx = beforeIdx;
+          }
+          toTasks.splice(insertIdx, 0, movedTask);
+          fromCard.tasks = fromTasks;
+          toCard.tasks = toTasks;
+          saveCards();
+          renderCards();
+        }
+      }
     } else if (dragState.source === 'card') {
       const fromIndex = cards.findIndex(function (c) { return c.id === dragState.id; });
       if (fromIndex !== -1 && dragState.target) {
