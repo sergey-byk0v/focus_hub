@@ -433,7 +433,7 @@ body.dragging {
   border-left: 3px solid var(--accent);
   box-sizing: border-box;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--text);
   padding: 2px 6px;
   overflow: hidden;
@@ -480,10 +480,16 @@ body.dragging {
 
 .range-control {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.range-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .range-control input {
