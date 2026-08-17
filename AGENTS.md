@@ -219,24 +219,26 @@ Slot = { id, date: 'YYYY-MM-DD', startMinute, endMinute, label }
 - Persisted under `plannerCards` / `plannerSlots`
 
 ### Tasks Deck
-- Cards JS-packed into 4 columns (`DECK_COLS=4`, `DECK_GAP=12`) via `layoutDeck()` — heights measured with clones in a hidden `meas` div; `ResizeObserver` on `#card-deck` re-lays out on resize
-- Card: color chip cycles through `CARD_COLORS` (8 colors), dblclick inline rename, `.card-delete` button, add-task input, `.task` rows (checkbox `.task-check`, text, `.task-delete`)
+- Cards JS-packed into dynamic columns (`MIN_CARD_W=220`, `DECK_GAP=12`) via `layoutDeck()` — heights measured with clones in a hidden `meas` div; `ResizeObserver` on `#card-deck` re-lays out on resize
+- Card: color chip cycles through `CARD_COLORS` (8 colors), dblclick inline rename, `.card-delete` button, add-task input, `.task` rows (checkbox `.task-check`, text, `.task-delete`); header uses Lucide square-check icon instead of 'Tasks' text
 - Task rows: checkbox toggles `done`; dblclick (or click) inline-edits via `.task-edit-input`
 - New cards/tasks auto-open the name/text field
 
 ### Timeline
 - `#timeline` = `#hour-axis` (labels + lines) + `#slot-layer` (slots); height 100%, spans From/To range
 - **Timeline stretch**: `timelineScale()` = `clientHeight / (rangeEndMin() - rangeStartMin())`; hour lines/labels/slots all scale by it; `timelineY()` = `rangeStartMin() + (clientY - rect.top) / zoom / scale`
-- **From/To**: header steppers (−/+) + text inputs (0–23 / 1–24, `start < end`), persisted `plannerTimelineRange`; steppers read bounds via `getAttribute('min'/'max')` (`.min` is empty on text inputs)
+- **From/To**: stacked vertically (`.range-control` column, `.range-row` per line); header steppers (−/+) + text inputs (0–23 / 1–24, `start < end`), persisted `plannerTimelineRange`; steppers read bounds via `getAttribute('min'/'max')` (`.min` is empty on text inputs)
 - **Clear all**: red header button, single click, no confirm, disabled when today empty; removes today's slots
-- **Slots**: font-size 14px; click=30 min, drag≥15 min to draw; move 15-min snap; resize via top/bottom `.slot-resize-handle` (min 15 min); Delete/Backspace/Esc delete selected; dblclick inline rename; new slots auto-open name field
+- **Slots**: font-size 16px; click=30 min, drag≥15 min to draw; move 15-min snap; resize via top/bottom `.slot-resize-handle` (min 15 min); Delete/Backspace/Esc delete selected; dblclick inline rename; new slots auto-open name field
 - **Overlap hatch**: `renderOverlapLayer()` finds pairwise overlaps among today's slots, merges to maximal regions, paints `.slot-overlap` divs with a 45° diagonal hatch; `pointer-events:none; z-index:1`
 - **Zoom**: CSS `zoom` on `#app` (0.5–2), persisted `plannerZoom`; all viewport-px math divides by `zoom`
+- **Now-line**: `.now-line` (2px `var(--danger)`, full width, `pointer-events:none`, `z-index:2`) appended to `#timeline` once at init; `updateNowLine()` positions it at `(nowMinute() - rangeStartMin()) * timelineScale()`; visible only when current time is within From/To range; `scheduleNowLine()` aligns to next minute boundary then `setInterval(updateNowLine, 60000)` for per-minute stepping
 
 ### Drag & Drop
 - `DRAG_THRESHOLD=5`; ghost = fixed `#dragging-ghost` clone; `body.dragging` disables selection; `suppressClickUntil` blocks the post-drag synthetic click (300ms)
 - **Card reorder**: drag starts on `.card-header` only; drop on `.card` splices to its index, on `.add-card` moves to end
 - **Task row drag**: pointerdown on `.task` (skips `.task-check`/`.task-delete`/`.task-edit-input`) — same machinery
+- **Task reorder**: `moveDrag()` detects `.task` rows under cursor via `elementFromPoint`; top/bottom half sets `.drop-above`/`.drop-below` indicators + `dropTargetCardId`/`dropBeforeTaskId`; `endDrag()` splices task from source card and inserts at target position; supports within-card reorder and cross-card move
 - **Drop on timeline**: `#timeline` gets `.drop-target` accent ring + `.slot-preview` at snapped position; release → `commitTimelineDrop()` creates a 30-min slot labeled with the **task text** (or **card name**), clamped to the visible range, auto-selected. Independent copy — the task/card stays in the deck
 
 ## Version
