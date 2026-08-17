@@ -200,7 +200,6 @@
   }
 
   const DECK_GAP = 12;
-  const DECK_COLS = 4;
 
   function renderCards() {
     cardDeck.innerHTML = '';
@@ -226,7 +225,9 @@
     if (!items.length) return;
 
     const pad = 14;
-    const colW = Math.floor((cardDeck.clientWidth - pad * 2 - DECK_GAP * (DECK_COLS - 1)) / DECK_COLS);
+    const MIN_CARD_W = 180;
+    const cols = Math.max(1, Math.floor((cardDeck.clientWidth - pad * 2 + DECK_GAP) / (MIN_CARD_W + DECK_GAP)));
+    const colW = Math.floor((cardDeck.clientWidth - pad * 2 - DECK_GAP * (cols - 1)) / cols);
 
     const meas = document.createElement('div');
     meas.style.cssText = 'position:absolute;visibility:hidden;left:-9999px;top:0;width:' + colW + 'px;';
@@ -237,7 +238,7 @@
       return clone.offsetHeight;
     });
 
-    const colTops = new Array(DECK_COLS).fill(0);
+    const colTops = new Array(cols).fill(0);
     items.forEach(function (el, i) {
       const c = colTops.indexOf(Math.min.apply(null, colTops));
       el.style.cssText = 'position:absolute;width:' + colW + 'px;left:' + (pad + c * (colW + DECK_GAP)) + 'px;top:' + colTops[c] + 'px;';
