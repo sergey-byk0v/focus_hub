@@ -1066,7 +1066,7 @@
 
   function clearDropTarget() {
     if (dragState && dragState.target) dragState.target.classList.remove('drop-target');
-    slotLayer.parentElement.querySelectorAll('.task.drop-above, .task.drop-below').forEach(function (t) {
+    cardDeck.querySelectorAll('.task.drop-above, .task.drop-below').forEach(function (t) {
       t.classList.remove('drop-above', 'drop-below');
     });
   }
