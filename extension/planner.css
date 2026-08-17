@@ -77,8 +77,7 @@ body {
 }
 
 #timeline-header h1,
-#cards-header h2 {
-  font-size: 17px;
+#cards-header svg {
   color: var(--text-label);
 }
 
