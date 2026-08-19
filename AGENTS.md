@@ -242,7 +242,7 @@ Slot = { id, date: 'YYYY-MM-DD', startMinute, endMinute, label }
 - **Drop on timeline**: `#timeline` gets `.drop-target` accent ring + `.slot-preview` at snapped position; release → `commitTimelineDrop()` creates a 30-min slot labeled with the **task text** (or **card name**), clamped to the visible range, auto-selected. Independent copy — the task/card stays in the deck
 
 ## Version
-- Current: `1.1.1` (manifest.json)
+- Current: `1.1.2` (manifest.json)
 - Release zips in `versions/` folder
 
 ## Release & Update Workflow
