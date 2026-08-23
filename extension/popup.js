@@ -8,6 +8,7 @@ let blocklistSites = [];
 let whitelistSites = [];
 let listMode = 'blocklist';
 let blockingMode = 'reason';
+let shuffleReasons = false;
 let crossoverMode = 'low';
 let enabledTabs = ['timer', 'modulation', 'block', 'themes'];
 let showSuggestions = true;
@@ -86,6 +87,8 @@ const els = {
   modeBlockBtn: document.getElementById('modeBlockBtn'),
   modeBlocklist: document.getElementById('modeBlocklist'),
   modeWhitelist: document.getElementById('modeWhitelist'),
+  shuffleReasons: document.getElementById('shuffleReasons'),
+  shuffleReasonsRow: document.getElementById('shuffleReasonsRow'),
   themeGrid: document.getElementById('themeGrid'),
   unlockBtn: document.getElementById('unlockBtn'),
   plannerBtn: document.getElementById('plannerBtn'),
@@ -433,6 +436,7 @@ async function loadBlockedSites() {
 function updateModeUI() {
   els.modeReason.classList.toggle('active', blockingMode === 'reason');
   els.modeBlockBtn.classList.toggle('active', blockingMode === 'complete');
+  els.shuffleReasonsRow.style.display = blockingMode === 'reason' ? '' : 'none';
 }
 
 function updateListModeUI() {
@@ -805,6 +809,11 @@ if (suggestionsToggle) {
   });
 }
 
+els.shuffleReasons.addEventListener('change', () => {
+  shuffleReasons = els.shuffleReasons.checked;
+  chrome.storage.local.set({ shuffleReasons });
+});
+
 var suggestionsEditor = document.getElementById('suggestionsEditor');
 var suggestionsSaveBtn = document.getElementById('suggestionsSaveBtn');
 var suggestionsRestoreBtn = document.getElementById('suggestionsRestoreBtn');
@@ -862,6 +871,11 @@ chrome.runtime.onMessage.addListener((message) => {
   var ssResult = await chrome.storage.local.get('showSuggestions');
   showSuggestions = ssResult.showSuggestions !== undefined ? ssResult.showSuggestions : true;
   if (suggestionsToggle) suggestionsToggle.checked = showSuggestions;
+  var shResult = await chrome.storage.local.get('shuffleReasons');
+  shuffleReasons = shResult.shuffleReasons === true;
+  els.shuffleReasons.checked = shuffleReasons;
+  els.shuffleReasonsRow.style.display = blockingMode === 'reason' ? '' : 'none';
+
   var scResult = await chrome.storage.local.get('suggestionsContent');
   if (!scResult.suggestionsContent) {
     try { var resp = await fetch(chrome.runtime.getURL('suggestions.md')); scResult.suggestionsContent = await resp.text(); } catch (_) {}

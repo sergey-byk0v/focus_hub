@@ -40,6 +40,7 @@
 | `enabledTabs` | `string[]` | popup.js |
 | `crossoverMode` | `"low"\|"high"` | popup.js |
 | `showSuggestions` | `boolean` | popup.js, block.js |
+| `shuffleReasons` | `boolean` | popup.js, block.js |
 | `suggestionsContent` | `string` (markdown) | popup.js, block.js |
 | `blockedDomains` | `string[]` | background.js |
 | `whitelistDomains` | `string[]` | background.js |

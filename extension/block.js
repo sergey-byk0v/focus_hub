@@ -66,6 +66,19 @@
     return;
   }
 
+  // ===== Shuffle reasons =====
+  (async () => {
+    var { shuffleReasons } = await chrome.storage.local.get('shuffleReasons');
+    if (shuffleReasons) {
+      var btns = Array.from(tagGrid.querySelectorAll('.tag-btn'));
+      for (let i = btns.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        [btns[i], btns[j]] = [btns[j], btns[i]];
+      }
+      btns.forEach(b => tagGrid.appendChild(b));
+    }
+  })();
+
   // ===== Tag selection =====
   tagGrid.addEventListener('click', (e) => {
     const btn = e.target.closest('.tag-btn');
