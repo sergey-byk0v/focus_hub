@@ -41,10 +41,15 @@
 | `crossoverMode` | `"low"\|"high"` | popup.js |
 | `showSuggestions` | `boolean` | popup.js, block.js |
 | `shuffleReasons` | `boolean` | popup.js, block.js |
+| `focusMusicUrl` | `string` (URL) | popup.js, background.js |
+| `musicTabId` | `number`\|`null` | popup.js, background.js |
+| `launchMusicOnStart` | `boolean` | popup.js, background.js |
 | `suggestionsContent` | `string` (markdown) | popup.js, block.js |
 | `blockedDomains` | `string[]` | background.js |
 | `whitelistDomains` | `string[]` | background.js |
 | `blockingMode` (in bg) | `"reason"\|"complete"` | background.js |
+
+**Focus Music:** `OPEN_MUSIC_TAB` message (background.js) opens the music tab about:blank-first, pre-approves it in `chrome.storage.session` (tabId → URL array), then `chrome.tabs.update` navigates to the real URL — so the blocker bypass only applies to the button-triggered navigation, deterministically (avoids the create/navigation race). Shared `openMusicTab(url)` helper is reused by `onStartup`/`onInstalled` to auto-open the music tab when `launchMusicOnStart` is enabled.
 | `plannerCards` | `Card[]` | planner.js |
 | `plannerSlots` | `Slot[]` | planner.js |
 | `plannerTimelineWidth` | `number` (px) | planner.js |
@@ -243,7 +248,7 @@ Slot = { id, date: 'YYYY-MM-DD', startMinute, endMinute, label }
 - **Drop on timeline**: `#timeline` gets `.drop-target` accent ring + `.slot-preview` at snapped position; release → `commitTimelineDrop()` creates a 30-min slot labeled with the **task text** (or **card name**), clamped to the visible range, auto-selected. Independent copy — the task/card stays in the deck
 
 ## Version
-- Current: `1.1.2` (manifest.json)
+- Current: `1.2.0` (manifest.json)
 - Release zips in `versions/` folder
 
 ## Release & Update Workflow
@@ -290,7 +295,7 @@ Steps to prepare and share a new release:
 4. **Inline styles override CSS** — `updateTabVisibility()` uses inline `display`, which beats CSS `:checked ~` rules.
 5. **Service worker state** — background.js variables reset on SW idle; reload from storage on each message.
 6. **No remote code** — all audio is client-side, no external assets.
-7. **Tab approval race** — `chrome.storage.session.set` from block page context is not immediately visible to service worker context after Chrome ≥150 update. Fixed by using `APPROVE_TAB` runtime message + in-memory `approvedTabs` map in background.js.
+7. **Tab approval race** — `chrome.storage.session.set` from block page context is not immediately visible to service worker context after Chrome ≥150 update. Keep approval writes in the service worker (the `APPROVE_TAB` message handler writes to `chrome.storage.session`, and `onBeforeNavigate` reads/consumes it in the same SW context, so it's always visible). Approvals live in `chrome.storage.session` (keyed by tabId → array of URLs) so they survive SW termination; `onStartup`/`onInstalled` clear the session to drop stale entries from aborted navigations.
 8. **suggestionsContent fallback** — block.js reads from `chrome.storage.local` first; if empty, fetches the bundled `suggestions.md`. The bundled file is never modified — custom content is stored separately.
 9. **Stepper bounds on text inputs** — From/To are `type="text"` (native number inputs broke rendering); stepper JS must read `getAttribute('min'/'max')` because `input.min` is empty on text inputs.
 10. **Overlap hatch needs two background properties** — the 45° hatch uses `background-color: color-mix(...)` separate from `background-image: repeating-linear-gradient(...)`; putting `color-mix` inside the gradient fails to paint.

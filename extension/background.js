@@ -57,10 +57,9 @@ let blocklistDomains = [];
 let whitelistDomains = [];
 let listMode = 'blocklist';
 let blockingMode = 'reason';
-let approvedTabs = {};
 
 async function loadBlockerState() {
-  const result = await chrome.storage.local.get(['blocklistDomains', 'whitelistDomains', 'listMode', 'blockingMode']);
+  const result = await chrome.storage.local.get(['blocklistDomains', 'whitelistDomains', 'listMode', 'blockingMode', 'focusMusicUrl']);
   if (result.blocklistDomains) blocklistDomains = result.blocklistDomains;
   if (result.whitelistDomains) whitelistDomains = result.whitelistDomains;
   if (result.listMode) listMode = result.listMode;
@@ -71,7 +70,7 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
   if (details.frameId !== 0) return;
 
   if (blocklistDomains.length === 0 && whitelistDomains.length === 0) {
-    const result = await chrome.storage.local.get(['blocklistDomains', 'whitelistDomains', 'listMode']);
+    const result = await chrome.storage.local.get(['blocklistDomains', 'whitelistDomains', 'listMode', 'focusMusicUrl']);
     if (result.blocklistDomains) blocklistDomains = result.blocklistDomains;
     if (result.whitelistDomains) whitelistDomains = result.whitelistDomains;
     if (result.listMode) listMode = result.listMode;
@@ -93,8 +92,12 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
 
     const key = String(details.tabId);
 
-    if (approvedTabs[key] === details.url) {
-      delete approvedTabs[key];
+    const { [key]: approved = [] } = await chrome.storage.session.get(key);
+    const approvedIdx = approved.indexOf(details.url);
+    if (approvedIdx !== -1) {
+      approved.splice(approvedIdx, 1);
+      if (approved.length) await chrome.storage.session.set({ [key]: approved });
+      else await chrome.storage.session.remove(key);
       return;
     }
 
@@ -108,6 +111,25 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
 });
 
 // ==================== Message Handlers ====================
+
+async function openMusicTab(url) {
+  const target = url || 'https://www.youtube.com/watch?v=lTRiuFIWV54';
+  const tab = await chrome.tabs.create({});
+  const key = String(tab.id);
+  const { [key]: approved = [] } = await chrome.storage.session.get(key);
+  if (!approved.includes(target)) approved.push(target);
+  await chrome.storage.session.set({ [key]: approved });
+  await chrome.tabs.update(tab.id, { url: target });
+  await chrome.storage.local.set({ musicTabId: tab.id });
+  return tab;
+}
+
+async function maybeAutoOpenMusic() {
+  const result = await chrome.storage.local.get(['launchMusicOnStart', 'focusMusicUrl']);
+  if (result.launchMusicOnStart === true) {
+    try { await openMusicTab(result.focusMusicUrl); } catch (_) {}
+  }
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'START_CAPTURE') {
@@ -230,9 +252,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'OPEN_MUSIC_TAB') {
+    (async () => {
+      try {
+        const tab = await openMusicTab(message.url);
+        sendResponse({ ok: true, tabId: tab.id });
+      } catch (e) {
+        sendResponse({ ok: false, error: e.message });
+      }
+    })();
+    return true;
+  }
+
   if (message.type === 'APPROVE_TAB') {
-    approvedTabs[String(message.tabId)] = message.url;
-    sendResponse({ success: true });
+    (async () => {
+      const key = String(message.tabId);
+      const { [key]: approved = [] } = await chrome.storage.session.get(key);
+      if (!approved.includes(message.url)) approved.push(message.url);
+      await chrome.storage.session.set({ [key]: approved });
+      sendResponse({ success: true });
+    })();
     return true;
   }
 
@@ -276,6 +315,18 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 });
 
 // ==================== Startup ====================
+
+chrome.runtime.onStartup.addListener(async () => {
+  await chrome.storage.session.clear();
+  maybeAutoOpenMusic();
+});
+
+chrome.runtime.onInstalled.addListener(async (details) => {
+  await chrome.storage.session.clear();
+  if (details.reason === 'install' || details.reason === 'update') {
+    maybeAutoOpenMusic();
+  }
+});
 
 loadState();
 loadBlockerState();

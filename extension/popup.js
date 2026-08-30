@@ -9,6 +9,8 @@ let whitelistSites = [];
 let listMode = 'blocklist';
 let blockingMode = 'reason';
 let shuffleReasons = false;
+const DEFAULT_MUSIC_URL = 'https://www.youtube.com/watch?v=lTRiuFIWV54';
+let musicTabId = null;
 let crossoverMode = 'low';
 let enabledTabs = ['timer', 'modulation', 'block', 'themes'];
 let showSuggestions = true;
@@ -89,6 +91,10 @@ const els = {
   modeWhitelist: document.getElementById('modeWhitelist'),
   shuffleReasons: document.getElementById('shuffleReasons'),
   shuffleReasonsRow: document.getElementById('shuffleReasonsRow'),
+  playMusicBtn: document.getElementById('playMusicBtn'),
+  musicUrlInput: document.getElementById('musicUrlInput'),
+  musicUrlSaveBtn: document.getElementById('musicUrlSaveBtn'),
+  launchMusicOnStart: document.getElementById('launchMusicOnStart'),
   themeGrid: document.getElementById('themeGrid'),
   unlockBtn: document.getElementById('unlockBtn'),
   plannerBtn: document.getElementById('plannerBtn'),
@@ -814,6 +820,54 @@ els.shuffleReasons.addEventListener('change', () => {
   chrome.storage.local.set({ shuffleReasons });
 });
 
+function openFocusMusic() {
+  const url = (els.musicUrlInput.value.trim() || DEFAULT_MUSIC_URL);
+  if (musicTabId) {
+    chrome.tabs.get(musicTabId, (tab) => {
+      if (!chrome.runtime.lastError && tab) {
+        chrome.tabs.update(musicTabId, { active: true });
+        return;
+      }
+      musicTabId = null;
+      chrome.storage.local.set({ musicTabId: null });
+      openFocusMusic();
+    });
+    return;
+  }
+  chrome.runtime.sendMessage({ type: 'OPEN_MUSIC_TAB', url }, (response) => {
+    if (response && response.ok && response.tabId) {
+      musicTabId = response.tabId;
+      chrome.storage.local.set({ musicTabId });
+    } else {
+      chrome.tabs.create({ url }, (tab) => {
+        musicTabId = tab.id;
+        chrome.storage.local.set({ musicTabId });
+      });
+    }
+  });
+}
+
+els.playMusicBtn.addEventListener('click', openFocusMusic);
+
+els.musicUrlSaveBtn.addEventListener('click', () => {
+  const url = els.musicUrlInput.value.trim() || DEFAULT_MUSIC_URL;
+  chrome.storage.local.set({ focusMusicUrl: url }, () => {
+    els.musicUrlSaveBtn.textContent = 'Saved';
+    setTimeout(() => { els.musicUrlSaveBtn.textContent = 'Save'; }, 1200);
+  });
+});
+
+els.launchMusicOnStart.addEventListener('change', () => {
+  chrome.storage.local.set({ launchMusicOnStart: els.launchMusicOnStart.checked });
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  if (tabId === musicTabId) {
+    musicTabId = null;
+    chrome.storage.local.set({ musicTabId: null });
+  }
+});
+
 var suggestionsEditor = document.getElementById('suggestionsEditor');
 var suggestionsSaveBtn = document.getElementById('suggestionsSaveBtn');
 var suggestionsRestoreBtn = document.getElementById('suggestionsRestoreBtn');
@@ -871,6 +925,11 @@ chrome.runtime.onMessage.addListener((message) => {
   var ssResult = await chrome.storage.local.get('showSuggestions');
   showSuggestions = ssResult.showSuggestions !== undefined ? ssResult.showSuggestions : true;
   if (suggestionsToggle) suggestionsToggle.checked = showSuggestions;
+  var musicResult = await chrome.storage.local.get(['focusMusicUrl', 'musicTabId', 'launchMusicOnStart']);
+  if (els.musicUrlInput) els.musicUrlInput.value = musicResult.focusMusicUrl || DEFAULT_MUSIC_URL;
+  if (musicResult.musicTabId) musicTabId = musicResult.musicTabId;
+  if (els.launchMusicOnStart) els.launchMusicOnStart.checked = musicResult.launchMusicOnStart === true;
+
   var shResult = await chrome.storage.local.get('shuffleReasons');
   shuffleReasons = shResult.shuffleReasons === true;
   els.shuffleReasons.checked = shuffleReasons;
