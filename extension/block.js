@@ -178,16 +178,20 @@
 
     await chrome.storage.local.set({ entries });
 
+    if (showSuggestions && suggestionsMap && suggestionsMap[tag.toLowerCase()]) {
+      showSuggestionsForTag(tag);
+      return;
+    }
+    goToSite();
+  }
+
+  async function goToSite() {
+    if (!targetUrl || !tabId) return;
     await chrome.runtime.sendMessage({
       type: 'APPROVE_TAB',
       tabId: tabId,
       url: targetUrl
     });
-
-    if (showSuggestions && suggestionsMap && suggestionsMap[tag.toLowerCase()]) {
-      showSuggestionsForTag(tag);
-      return;
-    }
     chrome.tabs.update(tabId, { url: targetUrl });
   }
 
@@ -330,7 +334,7 @@
   }
 
   continueBtn.addEventListener('click', function () {
-    chrome.tabs.update(tabId, { url: targetUrl });
+    goToSite();
   });
 
   // ===== Statistics =====

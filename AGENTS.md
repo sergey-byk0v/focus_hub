@@ -1,5 +1,23 @@
 # Focus Hub — Agent Documentation
 
+## Agent Instructions
+
+1. **Core Behavior: Search Before You Build**
+   - Whenever you are presented with a problem, bug, or feature request, your first step must be to search for existing solutions.
+   - **External Search:** Use web search to find established libraries, packages, or well-documented patterns that solve the problem.
+   - **Internal Search:** Search the current codebase to see if a utility or pattern already exists before creating a new one.
+   - **Action:** Only write custom code if no existing, reliable solution is found, or if the user explicitly requests a custom implementation. If you find a library, state its name and use it.
+
+2. **Communication Style: Extreme Conciseness**
+   - Do not write long, verbose responses. Eliminate filler text, conversational pleasantries, and unnecessary explanations.
+   - When asked about possibilities (e.g., "Can you do X?", "Is it possible to Y?"): answer with a direct "Yes" or "No", provide a maximum of 2-3 short bullet points stating how (e.g., a specific library, API, or command), and do not write implementation code unless explicitly asked to do so.
+   - When explaining concepts: use brief, high-level bullet points; keep the entire response under 4 sentences; get straight to the technical core.
+
+3. **Code Generation Rules**
+   - Provide only the code that has changed or is necessary. Do not output entire files if only a few lines changed.
+   - Include brief comments only where the logic is complex or non-obvious.
+   - If you used an existing library based on Section 1, mention it in a single-line comment above the implementation.
+
 ## Stack
 - Chrome Extension Manifest V3
 - No framework, no bundler — vanilla JS
@@ -98,6 +116,7 @@ const INITIALLY_UNLOCKED = ['dark']; // only Dark unlocked initially
 ### Modes
 - **Reason block** — block page shows reason tags + countdown
 - **Complete block** — blocks navigation entirely (no block page)
+  - The `shuffleReasons` toggle (see Block Page) is hidden when Complete mode is selected (`updateModeUI()` in popup.js)
 
 ### List Modes
 - **Blocklist** — blocks listed domains (default)
@@ -162,6 +181,7 @@ const params = {
 
 ## Block Page (block.html)
 - Reason tags: Waiting, Bored, Procrastination, Avoiding something, Free-time chill, Work/Study, On background, Other
+- `shuffleReasons` toggle (popup > Blocking tab, hidden in Complete mode): when enabled, reason tags are Fisher-Yates-shuffled on each block page load
 - Countdown: 6 seconds before "Proceed" enables
 - Continue countdown: 6 seconds after suggestions render before "Continue to site" enables
 - Entry model: `{ url, reason, tag, customText, timestamp, date }`
@@ -248,8 +268,10 @@ Slot = { id, date: 'YYYY-MM-DD', startMinute, endMinute, label }
 - **Drop on timeline**: `#timeline` gets `.drop-target` accent ring + `.slot-preview` at snapped position; release → `commitTimelineDrop()` creates a 30-min slot labeled with the **task text** (or **card name**), clamped to the visible range, auto-selected. Independent copy — the task/card stays in the deck
 
 ## Version
-- Current: `1.2.0` (manifest.json)
+- Current: `1.2.1` (manifest.json)
 - Release zips in `versions/` folder
+
+The release process is codified in the project skill `.opencode/skill/release-focus-hub/` (auto-loads on "release/publish/bump"); the workflow below is the authoritative source of truth.
 
 ## Release & Update Workflow
 

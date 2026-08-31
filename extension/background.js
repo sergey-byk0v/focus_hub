@@ -57,6 +57,17 @@ let blocklistDomains = [];
 let whitelistDomains = [];
 let listMode = 'blocklist';
 let blockingMode = 'reason';
+const APPROVAL_WINDOW_MS = 15000;
+
+function normalizeHost(h) {
+  return String(h || '').replace(/^www\./, '').toLowerCase();
+}
+
+function sameDomain(a, b) {
+  a = normalizeHost(a);
+  b = normalizeHost(b);
+  return a === b || a.endsWith('.' + b) || b.endsWith('.' + a);
+}
 
 async function loadBlockerState() {
   const result = await chrome.storage.local.get(['blocklistDomains', 'whitelistDomains', 'listMode', 'blockingMode', 'focusMusicUrl']);
@@ -92,12 +103,9 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
 
     const key = String(details.tabId);
 
-    const { [key]: approved = [] } = await chrome.storage.session.get(key);
-    const approvedIdx = approved.indexOf(details.url);
-    if (approvedIdx !== -1) {
-      approved.splice(approvedIdx, 1);
-      if (approved.length) await chrome.storage.session.set({ [key]: approved });
-      else await chrome.storage.session.remove(key);
+    const { [key]: grant } = await chrome.storage.session.get(key);
+    if (grant && grant.expires > Date.now() && sameDomain(grant.domain, hostname)) {
+      await chrome.storage.session.remove(key);
       return;
     }
 
@@ -266,10 +274,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'APPROVE_TAB') {
     (async () => {
+      let domain = '';
+      try { domain = normalizeHost(new URL(message.url).hostname); } catch (_) {}
       const key = String(message.tabId);
-      const { [key]: approved = [] } = await chrome.storage.session.get(key);
-      if (!approved.includes(message.url)) approved.push(message.url);
-      await chrome.storage.session.set({ [key]: approved });
+      await chrome.storage.session.set({ [key]: { domain, expires: Date.now() + APPROVAL_WINDOW_MS } });
       sendResponse({ success: true });
     })();
     return true;
