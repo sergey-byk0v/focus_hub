@@ -180,10 +180,18 @@
     const addRow = document.createElement('div');
     addRow.className = 'add-task-row';
 
-    const addInput = document.createElement('input');
+    const addInput = document.createElement('textarea');
     addInput.className = 'add-task-input';
-    addInput.type = 'text';
+    addInput.rows = 1;
+    addInput.wrap = 'soft';
     addInput.placeholder = 'Add task…';
+
+    function fitAddInput() {
+      addInput.style.height = 'auto';
+      addInput.style.height = addInput.scrollHeight + 'px';
+    }
+    addInput.addEventListener('input', fitAddInput);
+    requestAnimationFrame(fitAddInput);
 
     const addBtn = document.createElement('button');
     addBtn.className = 'add-task-btn';
@@ -274,11 +282,19 @@
 
   function beginRename(cardEl, card) {
     const nameEl = cardEl.querySelector('.card-name');
-    const input = document.createElement('input');
+    const input = document.createElement('textarea');
     input.className = 'card-name-input';
-    input.type = 'text';
+    input.rows = 1;
+    input.wrap = 'soft';
     input.value = card.name;
     nameEl.replaceWith(input);
+
+    function fitInput() {
+      input.style.height = 'auto';
+      input.style.height = input.scrollHeight + 'px';
+    }
+    input.addEventListener('input', fitInput);
+    fitInput();
     input.focus();
     input.select();
 
@@ -294,8 +310,13 @@
     }
 
     input.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Enter') commit(true);
-      else if (ev.key === 'Escape') commit(false);
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        commit(true);
+      } else if (ev.key === 'Escape') {
+        ev.preventDefault();
+        commit(false);
+      }
     });
     input.addEventListener('blur', function () { commit(true); });
   }
@@ -338,11 +359,19 @@
 
   function beginTaskEdit(cardEl, taskRow, task) {
     const textEl = taskRow.querySelector('.task-text');
-    const input = document.createElement('input');
+    const input = document.createElement('textarea');
     input.className = 'task-edit-input';
-    input.type = 'text';
+    input.rows = 1;
+    input.wrap = 'soft';
     input.value = task.text;
     textEl.replaceWith(input);
+
+    function fitInput() {
+      input.style.height = 'auto';
+      input.style.height = input.scrollHeight + 'px';
+    }
+    input.addEventListener('input', fitInput);
+    fitInput();
     input.focus();
     input.select();
 
@@ -358,8 +387,13 @@
     }
 
     input.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Enter') commit(true);
-      else if (ev.key === 'Escape') commit(false);
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        commit(true);
+      } else if (ev.key === 'Escape') {
+        ev.preventDefault();
+        commit(false);
+      }
     });
     input.addEventListener('blur', function () { commit(true); });
   }
@@ -438,6 +472,7 @@
     if (e.key !== 'Enter') return;
     const input = e.target;
     if (!input.classList.contains('add-task-input')) return;
+    e.preventDefault();
     const cardEl = input.closest('.card');
     if (!cardEl) return;
     const card = cards.find(function (c) { return c.id === cardEl.dataset.id; });
@@ -810,12 +845,20 @@
   function beginSlotRename(slot, el) {
     const labelEl = el.querySelector('.slot-label');
     if (!labelEl) return;
-    const input = document.createElement('input');
+    const input = document.createElement('textarea');
     input.className = 'slot-name-input';
-    input.type = 'text';
+    input.rows = 1;
+    input.wrap = 'soft';
     input.maxLength = 60;
     input.value = slot.label || '';
     labelEl.replaceWith(input);
+
+    function fitInput() {
+      input.style.height = 'auto';
+      input.style.height = input.scrollHeight + 'px';
+    }
+    input.addEventListener('input', fitInput);
+    fitInput();
     input.focus();
     input.select();
 
@@ -834,9 +877,11 @@
     input.addEventListener('keydown', function (ev) {
       if (ev.key === 'Enter') {
         ev.stopPropagation();
+        ev.preventDefault();
         commit(true);
       } else if (ev.key === 'Escape') {
         ev.stopPropagation();
+        ev.preventDefault();
         commit(false);
       }
     });
