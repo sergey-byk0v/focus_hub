@@ -69,6 +69,13 @@ function sameDomain(a, b) {
   return a === b || a.endsWith('.' + b) || b.endsWith('.' + a);
 }
 
+async function approveUrl(tabId, url) {
+  let domain = '';
+  try { domain = normalizeHost(new URL(url).hostname); } catch (_) {}
+  const key = String(tabId);
+  await chrome.storage.session.set({ [key]: { domain, expires: Date.now() + APPROVAL_WINDOW_MS } });
+}
+
 async function loadBlockerState() {
   const result = await chrome.storage.local.get(['blocklistDomains', 'whitelistDomains', 'listMode', 'blockingMode', 'focusMusicUrl']);
   if (result.blocklistDomains) blocklistDomains = result.blocklistDomains;
@@ -123,10 +130,7 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
 async function openMusicTab(url) {
   const target = url || 'https://www.youtube.com/watch?v=lTRiuFIWV54';
   const tab = await chrome.tabs.create({});
-  const key = String(tab.id);
-  const { [key]: approved = [] } = await chrome.storage.session.get(key);
-  if (!approved.includes(target)) approved.push(target);
-  await chrome.storage.session.set({ [key]: approved });
+  await approveUrl(tab.id, target);
   await chrome.tabs.update(tab.id, { url: target });
   await chrome.storage.local.set({ musicTabId: tab.id });
   return tab;
@@ -274,10 +278,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'APPROVE_TAB') {
     (async () => {
-      let domain = '';
-      try { domain = normalizeHost(new URL(message.url).hostname); } catch (_) {}
-      const key = String(message.tabId);
-      await chrome.storage.session.set({ [key]: { domain, expires: Date.now() + APPROVAL_WINDOW_MS } });
+      await approveUrl(message.tabId, message.url);
       sendResponse({ success: true });
     })();
     return true;
