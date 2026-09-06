@@ -39,11 +39,11 @@ const SITE_BLOCK_FEATURES = {
     { settingKey: 'hideComments', title: 'Hide Comments', description: 'Hide comments section below videos' }
   ],
   'twitch.tv': [
-    { settingKey: 'hideChat', title: 'Hide Chat', description: 'Hide the live chat panel on stream pages' },
     { settingKey: 'hideFollowedSidebar', title: 'Hide Followed Sidebar', description: 'Hide the followed-channels sidebar below the player' },
     { settingKey: 'hideHomepageRecommendations', title: 'Hide Recommended Streams', description: 'Hide recommended and carousel sections on the homepage' },
     { settingKey: 'hideRelatedChannels', title: 'Hide Related Channels', description: 'Hide related channels listed next to the player' },
-    { settingKey: 'hideLiveChannels', title: 'Hide Live Channels', description: 'Hide the Live Channels section in the left sidebar' }
+    { settingKey: 'hideLiveChannels', title: 'Hide Live Channels', description: 'Hide the Live Channels section in the left sidebar' },
+    { settingKey: 'hideHomepage', title: 'Hide Homepage', description: 'Hide the carousel and feed sections on the homepage' }
   ]
 };
 let dcDomain = null;

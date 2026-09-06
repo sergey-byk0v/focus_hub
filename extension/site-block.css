@@ -33,10 +33,6 @@
 
 /* Twitch Deep Clean rules.
    Selectors use aria-label values — if Twitch renames a section, update here. */
-[focus-hub-twitch-hide-chat=true] .channel-root__right-column {
-  display: none !important;
-}
-
 [focus-hub-twitch-hide-followed-sidebar=true] .side-nav-section[aria-label="Followed Channels"] {
   display: none !important;
 }
@@ -45,10 +41,15 @@
   display: none !important;
 }
 
-[focus-hub-twitch-hide-related-channels=true] .side-nav-section[aria-label="Related Channels"] {
+[focus-hub-twitch-hide-related-channels=true] .side-nav-section[aria-label="Related Channels"],
+[focus-hub-twitch-hide-related-channels=true] .side-nav-section[aria-label="Recommended Categories"] {
   display: none !important;
 }
 
 [focus-hub-twitch-hide-live-channels=true] .side-nav-section[aria-label="Live Channels"] {
+  display: none !important;
+}
+
+[focus-hub-twitch-hide-homepage=true] [data-a-target="front-page-carousel"] {
   display: none !important;
 }
