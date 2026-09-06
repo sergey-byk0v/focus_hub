@@ -26,5 +26,19 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.youtube.com/*"
+      ],
+      "js": [
+        "site-block.js"
+      ],
+      "css": [
+        "site-block.css"
+      ],
+      "run_at": "document_start"
+    }
+  ]
 }

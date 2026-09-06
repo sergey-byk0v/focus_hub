@@ -34,6 +34,8 @@
 | `popup.js` | UI logic, state, theme unlock/select, blocking, settings |
 | `theme-data.js` | `THEMES[]`, `BASE_PALETTES{}`, `applyThemeById()` |
 | `background.js` | Service worker: `onBeforeNavigate` blocking, `SET_BLOCKED_DOMAINS`/`GET_BLOCKER_STATE` handlers |
+| `site-block.js` | In-page "Deep Clean" blocking: toggles `focus-hub-*` attributes on `<html>`, gates on per-site + global `deepCleanEnabled` |
+| `site-block.css` | Deep Clean hide rules per site (`[focus-hub-<site>-<feature>=true]` → `display:none!important`) |
 | `offscreen.js` | Audio graph: oscillator → biquad crossover → carrierGain/dryGain modulation |
 | `block.html` | Block page UI: reason tags, countdown, stats bar chart, CSV export |
 | `block.js` | Tag selection, entry saving, stats rendering, clearAll, CSV |
@@ -66,6 +68,8 @@
 | `blockedDomains` | `string[]` | background.js |
 | `whitelistDomains` | `string[]` | background.js |
 | `blockingMode` (in bg) | `"reason"\|"complete"` | background.js |
+| `siteBlocking` | `{domain:string, {enabled:boolean, [settingKey]:boolean}[]}` — Deep Clean per-site settings | popup.js, site-block.js |
+| `deepCleanEnabled` | `boolean` — global Deep Clean kill-switch | popup.js, site-block.js |
 
 **Focus Music:** `OPEN_MUSIC_TAB` message (background.js) opens the music tab about:blank-first, pre-approves it in `chrome.storage.session` (tabId → URL array), then `chrome.tabs.update` navigates to the real URL — so the blocker bypass only applies to the button-triggered navigation, deterministically (avoids the create/navigation race). Shared `openMusicTab(url)` helper is reused by `onStartup`/`onInstalled` to auto-open the music tab when `launchMusicOnStart` is enabled.
 | `plannerCards` | `Card[]` | planner.js |
@@ -129,6 +133,15 @@ const INITIALLY_UNLOCKED = ['dark']; // only Dark unlocked initially
 4. `chrome.webNavigation.onBeforeNavigate` checks mode:
    - Blocklist: block if domain in `blockedDomains`
    - Whitelist: block if domain NOT in `whitelistDomains`
+
+## Deep Clean System (in-page blocking)
+
+- **UI (popup > Blocking tab > "Deep Clean" card):** header switch = global kill-switch (`deepCleanEnabled`); per-site rows show active-feature chips + `[Configure]`; global-off hides rows/footer (CSS `.off`); `SITE_BLOCK_FEATURES` in popup.js is the single source of site feature lists (drives card + dialog).
+- **Card layout:** header `switch` (`#deepCleanEnabled`) + caption + `#deepCleanSiteList` (JS-rendered rows) + `#deepCleanEmpty` ("No sites supported yet.", shown only when `SITE_BLOCK_FEATURES` is empty) + `.dc-footer` ("More sites coming soon."). Global-off toggles `off` class on `#deepCleanCard` → rows + footer hidden, header switch stays.
+- **Rows (renderDeepCleanList()):** site domain + `.dc-controls` → one `.dc-chip` per active feature (title case) or a `.dc-chip.faint` "Nothing hidden" pill, plus `[Configure]` (`aria-label="Configure Deep Clean for <domain>"`). Row hover bg via `.dc-site-row:hover`. Rows always render from `SITE_BLOCK_FEATURES` keys — adding a site = one entry there + one `SITE_BLOCK_CONFIG` entry in site-block.js + CSS rules + manifest `content_scripts.matches`; **no popup markup changes**.
+- **Dialog (`#deepCleanModal`):** per-site master switch (`#dcEnabled`) + feature rows (`#dcFeatures`). `openDeepCleanDialog(domain)` seeds from `siteBlocking[domain]`; `updateDeepCleanState()` toggles the `.enabled` class on `#dcFeatures` from the master switch state (and `disabled` on feature inputs). `persistDeepClean()` writes `siteBlocking[domain] = { enabled, [settingKey] }`. Close via ×/backdrop/Escape → `closeDeepCleanDialog()` re-renders the list. `.modal` uses `overscroll-behavior:contain`.
+- **Engine (site-block.js):** content script toggles `focus-hub-<site>-<feature>=true/false` on `<html>`; site-block.css hides via `display:none!important`. Applies on load and on `chrome.storage.onChanged` (both `siteBlocking` and `deepCleanEnabled`). Both the global flag (`deepCleanEnabled === false`) and per-site `enabled` off clear all attributes. Global off removes attributes on every page instantly — pure-CSS hiding means content reappears immediately (no reload needed).
+- **Status:** YouTube live. **Twitch exists UI-only** — `twitch.tv` entry in `SITE_BLOCK_FEATURES` (Hide Chat / Followed Sidebar / Recommended Streams / Related Channels) renders row + dialog, but `SITE_BLOCK_CONFIG`, twitch selectors in site-block.css, and the `*://*.twitch.tv/*` content_scripts match are NOT yet added.
 
 ## Audio System (offscreen.js)
 
@@ -318,7 +331,8 @@ Steps to prepare and share a new release:
 5. **Service worker state** — background.js variables reset on SW idle; reload from storage on each message.
 6. **No remote code** — all audio is client-side, no external assets.
 7. **Tab approval race** — `chrome.storage.session.set` from block page context is not immediately visible to service worker context after Chrome ≥150 update. Keep approval writes in the service worker (the `APPROVE_TAB` message handler writes to `chrome.storage.session`, and `onBeforeNavigate` reads/consumes it in the same SW context, so it's always visible). Approvals live in `chrome.storage.session` (keyed by tabId → array of URLs) so they survive SW termination; `onStartup`/`onInstalled` clear the session to drop stale entries from aborted navigations.
-8. **suggestionsContent fallback** — block.js reads from `chrome.storage.local` first; if empty, fetches the bundled `suggestions.md`. The bundled file is never modified — custom content is stored separately.
+8. **Twitch is UI-only** — the `twitch.tv` row/dialog render from `SITE_BLOCK_FEATURES`, but without `SITE_BLOCK_CONFIG` + `site-block.css` rules + a `content_scripts.matches` entry no attributes are ever toggled on Twitch. Don't claim Twitch support works until those land.
+9. **suggestionsContent fallback** — block.js reads from `chrome.storage.local` first; if empty, fetches the bundled `suggestions.md`. The bundled file is never modified — custom content is stored separately.
 9. **Stepper bounds on text inputs** — From/To are `type="text"` (native number inputs broke rendering); stepper JS must read `getAttribute('min'/'max')` because `input.min` is empty on text inputs.
 10. **Overlap hatch needs two background properties** — the 45° hatch uses `background-color: color-mix(...)` separate from `background-image: repeating-linear-gradient(...)`; putting `color-mix` inside the gradient fails to paint.
 11. **Zoom-aware timeline math** — every viewport-px → minute conversion divides by `/ zoom / scale`; missing the `zoom` factor makes pointer positions drift when zoom ≠ 1.

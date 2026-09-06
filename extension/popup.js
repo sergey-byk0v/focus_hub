@@ -31,6 +31,23 @@ const DEFAULT_BLOCKED_SITES = [
   { domain: 'twitter.com', enabled: true },
 ];
 
+const SITE_BLOCK_FEATURES = {
+  'youtube.com': [
+    { settingKey: 'hideHomePageSuggestions', title: 'Hide Home Page Suggestions', description: 'Hide suggested/recommended videos sections on the homepage' },
+    { settingKey: 'hideVideoPageSuggestions', title: 'Hide Video Page Suggestions', description: 'Hide suggested/recommended videos sidebar on video pages' },
+    { settingKey: 'hideShorts', title: 'Hide Shorts', description: 'Hide YouTube Shorts videos and sections' },
+    { settingKey: 'hideComments', title: 'Hide Comments', description: 'Hide comments section below videos' }
+  ],
+  'twitch.tv': [
+    { settingKey: 'hideChat', title: 'Hide Chat', description: 'Hide the live chat panel on stream pages' },
+    { settingKey: 'hideFollowedSidebar', title: 'Hide Followed Sidebar', description: 'Hide the followed-channels sidebar below the player' },
+    { settingKey: 'hideHomepageRecommendations', title: 'Hide Recommended Streams', description: 'Hide recommended and carousel sections on the homepage' },
+    { settingKey: 'hideRelatedChannels', title: 'Hide Related Channels', description: 'Hide related channels listed next to the player' }
+  ]
+};
+let dcDomain = null;
+
+
 const DEFAULT_PRESET_PARAMS = {
   frequency: 16, depth: 0.5, waveform: 'sine',
   spatialEnabled: false, spatialSpeed: 0.3, spatialWidth: 0.7,
@@ -98,6 +115,17 @@ const els = {
   themeGrid: document.getElementById('themeGrid'),
   unlockBtn: document.getElementById('unlockBtn'),
   plannerBtn: document.getElementById('plannerBtn'),
+  siteBlockingControls: document.getElementById('siteBlockingControls'),
+  deepCleanSiteList: document.getElementById('deepCleanSiteList'),
+  deepCleanEnabled: document.getElementById('deepCleanEnabled'),
+  deepCleanEmpty: document.getElementById('deepCleanEmpty'),
+  deepCleanCard: document.getElementById('deepCleanCard'),
+  deepCleanSummary: document.getElementById('deepCleanSummary'),
+  reasonPageBox: document.getElementById('reasonPageBox'),
+  deepCleanModal: document.getElementById('deepCleanModal'),
+  dcTitle: document.getElementById('dcTitle'),
+  dcFeatures: document.getElementById('dcFeatures'),
+  dcCloseBtn: document.getElementById('dcCloseBtn'),
 };
 
 function getParams() {
@@ -146,6 +174,9 @@ function updateCrossoverControls() {
 function updateCrossoverModeUI() {
   els.crossoverModeLow.classList.toggle('active', crossoverMode === 'low');
   els.crossoverModeHigh.classList.toggle('active', crossoverMode === 'high');
+  // Fix 5: announce selected state to assistive tech
+  els.crossoverModeLow.setAttribute('aria-pressed', crossoverMode === 'low');
+  els.crossoverModeHigh.setAttribute('aria-pressed', crossoverMode === 'high');
 }
 
 function updatePinkNoiseControls() {
@@ -217,8 +248,9 @@ function renderPresets() {
     if (isUser) {
       const del = document.createElement('button');
       del.textContent = '\u00d7';
-      del.style.cssText = 'width:18px;height:18px;border:none;background:transparent;color:#ff4757;border-radius:50%;cursor:pointer;font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+      del.style.cssText = 'width:18px;height:18px;border:none;background:transparent;color:var(--danger-text);border-radius:50%;cursor:pointer;font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
       del.title = 'Delete "' + preset.name + '"';
+      del.setAttribute('aria-label', 'Delete preset "' + preset.name + '"');
       del.addEventListener('click', (e) => {
         e.stopPropagation();
         if (confirm('Delete "' + preset.name + '"?')) deleteUserPreset(userIdx);
@@ -291,7 +323,8 @@ function setCapturing(state, tabId) {
     els.controls.classList.add('enabled');
     sendParams();
   } else {
-    els.captureTarget.textContent = '';
+    // Fix 11: show a helpful default instead of a blank slot
+    els.captureTarget.textContent = 'No tab captured';
     els.captureBtn.className = 'start';
     els.controls.classList.remove('enabled');
     currentTabTitle = '';
@@ -354,6 +387,17 @@ function renderSiteList() {
   els.blockedSiteList.innerHTML = '';
   const sites = listMode === 'blocklist' ? blocklistSites : whitelistSites;
 
+  // Fix 11: empty state
+  if (sites.length === 0) {
+    const hint = document.createElement('div');
+    hint.style.cssText = 'padding:8px 2px; font-size:12px; color:var(--text-muted);';
+    hint.textContent = listMode === 'blocklist'
+      ? 'Nothing blocked yet — add a site below.'
+      : 'Whitelist is empty — everything will be blocked.';
+    els.blockedSiteList.appendChild(hint);
+    return;
+  }
+
   sites.forEach((site, i) => {
     const row = document.createElement('div');
     row.className = 'block-site-row';
@@ -361,6 +405,7 @@ function renderSiteList() {
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.checked = site.enabled;
+    cb.setAttribute('aria-label', 'Toggle blocking for ' + site.domain);
     cb.addEventListener('change', () => {
       sites[i].enabled = cb.checked;
       saveBlockedSites();
@@ -377,7 +422,10 @@ function renderSiteList() {
     del.className = 'site-del';
     del.textContent = '\u00d7';
     del.title = 'Remove ' + site.domain;
+    del.setAttribute('aria-label', 'Remove ' + site.domain);
     del.addEventListener('click', () => {
+      // Fix 10: destructive action needs confirmation (matches preset delete)
+      if (!confirm('Remove ' + site.domain + ' from the list?')) return;
       sites.splice(i, 1);
       saveBlockedSites();
       renderSiteList();
@@ -433,6 +481,7 @@ async function loadBlockedSites() {
 
   listMode = result.listMode || 'blocklist';
   els.blockEnabled.checked = result.blockEnabled || false;
+  els.siteBlockingControls.classList.toggle('enabled', els.blockEnabled.checked);
 
   updateListModeUI();
   renderSiteList();
@@ -442,12 +491,19 @@ async function loadBlockedSites() {
 function updateModeUI() {
   els.modeReason.classList.toggle('active', blockingMode === 'reason');
   els.modeBlockBtn.classList.toggle('active', blockingMode === 'complete');
+  // Fix 5: announce selected state to assistive tech
+  els.modeReason.setAttribute('aria-pressed', blockingMode === 'reason');
+  els.modeBlockBtn.setAttribute('aria-pressed', blockingMode === 'complete');
   els.shuffleReasonsRow.style.display = blockingMode === 'reason' ? '' : 'none';
+  if (els.reasonPageBox) els.reasonPageBox.style.display = blockingMode === 'reason' ? '' : 'none';
 }
 
 function updateListModeUI() {
   els.modeBlocklist.classList.toggle('active', listMode === 'blocklist');
   els.modeWhitelist.classList.toggle('active', listMode === 'whitelist');
+  // Fix 5: announce selected state to assistive tech
+  els.modeBlocklist.setAttribute('aria-pressed', listMode === 'blocklist');
+  els.modeWhitelist.setAttribute('aria-pressed', listMode === 'whitelist');
   els.newSiteInput.placeholder = listMode === 'blocklist' ? 'Add site to block' : 'Add site to allow';
   renderSiteList();
 }
@@ -559,6 +615,7 @@ els.savePresetBtn.addEventListener('click', saveCurrentPreset);
 
 els.blockEnabled.addEventListener('change', () => {
   chrome.storage.local.set({ blockEnabled: els.blockEnabled.checked });
+  els.siteBlockingControls.classList.toggle('enabled', els.blockEnabled.checked);
   applyBlocking();
 });
 
@@ -696,6 +753,10 @@ function renderThemes() {
       btn.addEventListener("click", () => selectTheme(theme.id));
     } else {
       btn.textContent = "?";
+      // Fix 5: real disabled state — not focusable, announced as disabled
+      btn.disabled = true;
+      btn.title = "Locked theme — use Roll! to unlock";
+      btn.setAttribute("aria-label", "Locked theme: " + theme.name);
     }
 
     els.themeGrid.appendChild(btn);
@@ -942,6 +1003,7 @@ chrome.runtime.onMessage.addListener((message) => {
   if (suggestionsEditor) suggestionsEditor.value = scResult.suggestionsContent || '';
   renderThemes();
   updateUnlockButton();
+  renderDeepCleanList();
 })();
 
 chrome.storage.local.get('userPresets', result => {
@@ -961,4 +1023,169 @@ chrome.runtime.sendMessage({ type: 'QUERY_STATUS' }, (response) => {
       setCapturing(true, response.tabId);
     });
   }
+});
+
+
+// --- Deep Clean (in-page blocking) dialog ---
+
+function openDeepCleanDialog(domain) {
+  const feat = SITE_BLOCK_FEATURES[domain];
+  if (!feat) return;
+  dcDomain = domain;
+  els.dcTitle.textContent = 'Deep Clean — ' + domain;
+  renderFeatureRows(feat);
+  chrome.storage.local.get('siteBlocking').then(result => {
+    const s = (result.siteBlocking || {})[domain] || {};
+    els.dcFeatures.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.checked = !!s[cb.dataset.key];
+    });
+  });
+  els.deepCleanModal.hidden = false;
+}
+
+function closeDeepCleanDialog() {
+  els.deepCleanModal.hidden = true;
+  dcDomain = null;
+  renderDeepCleanList();
+}
+
+async function renderDeepCleanList() {
+  els.deepCleanSiteList.innerHTML = '';
+  const result = await chrome.storage.local.get(['siteBlocking', 'deepCleanEnabled']);
+  const all = result.siteBlocking || {};
+  els.deepCleanEnabled.checked = result.deepCleanEnabled !== false;
+  els.deepCleanCard.classList.toggle('off', !els.deepCleanEnabled.checked);
+
+  const domains = Object.keys(SITE_BLOCK_FEATURES);
+  els.deepCleanEmpty.hidden = domains.length > 0;
+  if (domains.length === 0) return;
+
+  let totalActive = 0;
+  let sitesActive = 0;
+
+  domains.forEach(domain => {
+    const s = all[domain] || {};
+    const settings = SITE_BLOCK_FEATURES[domain];
+    const siteEnabled = !!s.enabled;
+    const active = settings.filter(f => s[f.settingKey]);
+    if (siteEnabled) { totalActive += active.length; sitesActive++; }
+
+    const row = document.createElement('div');
+    row.className = 'dc-site-row';
+
+    const name = document.createElement('span');
+    name.className = 'dc-site-name';
+    name.textContent = domain;
+    row.appendChild(name);
+
+    const toggle = document.createElement('label');
+    toggle.className = 'switch switch-sm';
+    toggle.title = 'Toggle Deep Clean for ' + domain;
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = siteEnabled;
+    const slider = document.createElement('span');
+    slider.className = 'slider';
+    toggle.appendChild(cb);
+    toggle.appendChild(slider);
+    cb.addEventListener('change', async () => {
+      const res = await chrome.storage.local.get('siteBlocking');
+      const blocks = res.siteBlocking || {};
+      const entry = blocks[domain] || {};
+      entry.enabled = cb.checked;
+      blocks[domain] = entry;
+      await chrome.storage.local.set({ siteBlocking: blocks });
+      renderDeepCleanList();
+    });
+    row.appendChild(toggle);
+
+    const controls = document.createElement('span');
+    controls.className = 'dc-controls';
+
+    const badge = document.createElement('span');
+    if (active.length === 0) {
+      badge.className = 'dc-chip faint';
+      badge.textContent = 'All visible';
+    } else {
+      badge.className = 'dc-count';
+      badge.textContent = active.length + (active.length === 1 ? ' hidden' : ' hidden');
+    }
+    controls.appendChild(badge);
+
+    const btn = document.createElement('button');
+    btn.className = 'dc-config-btn';
+    btn.textContent = 'Configure';
+    btn.setAttribute('aria-label', 'Configure Deep Clean for ' + domain);
+    btn.addEventListener('click', () => openDeepCleanDialog(domain));
+    controls.appendChild(btn);
+
+    row.appendChild(controls);
+    els.deepCleanSiteList.appendChild(row);
+  });
+
+  if (sitesActive > 0) {
+    els.deepCleanSummary.textContent = totalActive + ' feature' + (totalActive === 1 ? '' : 's') + ' active on ' + sitesActive + ' site' + (sitesActive === 1 ? '' : 's');
+  } else {
+    els.deepCleanSummary.textContent = 'No features configured yet';
+  }
+}
+
+function renderFeatureRows(feat) {
+  els.dcFeatures.innerHTML = '';
+  feat.forEach(f => {
+    const row = document.createElement('div');
+    row.className = 'dc-feature-row';
+
+    const text = document.createElement('div');
+    const name = document.createElement('div');
+    name.className = 'dc-name';
+    name.textContent = f.title;
+    text.appendChild(name);
+
+    const label = document.createElement('label');
+    label.className = 'switch';
+    label.title = f.title;
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.dataset.key = f.settingKey;
+    const slider = document.createElement('span');
+    slider.className = 'slider';
+    label.appendChild(cb);
+    label.appendChild(slider);
+
+    row.appendChild(text);
+    row.appendChild(label);
+    els.dcFeatures.appendChild(row);
+  });
+}
+
+async function persistDeepClean() {
+  if (!dcDomain) return;
+  const result = await chrome.storage.local.get('siteBlocking');
+  const all = result.siteBlocking || {};
+  const entry = all[dcDomain] || {};
+  els.dcFeatures.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    entry[cb.dataset.key] = cb.checked;
+  });
+  all[dcDomain] = entry;
+  await chrome.storage.local.set({ siteBlocking: all });
+}
+
+els.deepCleanEnabled.addEventListener('change', () => {
+  els.deepCleanCard.classList.toggle('off', !els.deepCleanEnabled.checked);
+  chrome.storage.local.set({ deepCleanEnabled: els.deepCleanEnabled.checked });
+});
+
+els.dcFeatures.addEventListener('change', (e) => {
+  if (e.target.type === 'checkbox') persistDeepClean();
+});
+
+els.dcCloseBtn.addEventListener('click', closeDeepCleanDialog);
+
+els.deepCleanModal.addEventListener('click', (e) => {
+  if (e.target === els.deepCleanModal) closeDeepCleanDialog();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !els.deepCleanModal.hidden) closeDeepCleanDialog();
 });

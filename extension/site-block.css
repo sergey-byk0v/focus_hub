@@ -1,0 +1,31 @@
+/* YouTube Deep Clean rules (ported from the researched "Intentional" extension,
+   attribute names re-prefixed to focus-hub-youtube-*). */
+[focus-hub-youtube-hide-home-page-suggestions=true] ytd-browse[page-subtype=home] {
+  display: none !important;
+}
+
+[focus-hub-youtube-hide-video-page-suggestions=true] ytd-watch-flexy[flexy][is-two-columns_]:not([fullscreen]):not([theater]) {
+  --ytd-watch-flexy-max-player-width: calc(
+    var(--ytd-watch-flexy-chat-max-height) * var(--ytd-watch-flexy-width-ratio) / var(--ytd-watch-flexy-height-ratio)
+  ) !important;
+}
+[focus-hub-youtube-hide-video-page-suggestions=true] ytd-watch-flexy #secondary {
+  display: none !important;
+}
+
+[focus-hub-youtube-hide-shorts=true] ytd-reel-shelf-renderer,
+[focus-hub-youtube-hide-shorts=true] ytd-browse[page-subtype=home] ytd-rich-grid-renderer ytd-rich-section-renderer:has(a[href*=shorts]),
+[focus-hub-youtube-hide-shorts=true] #container.ytd-search ytd-video-renderer:has(a.yt-simple-endpoint[href*=shorts]),
+[focus-hub-youtube-hide-shorts=true] #related ytd-compact-video-renderer:has(a#thumbnail[href*=shorts]),
+[focus-hub-youtube-hide-shorts=true] ytd-browse[page-subtype=subscriptions] ytd-rich-section-renderer:has(a[href*=shorts]),
+[focus-hub-youtube-hide-shorts=true] ytd-browse[page-subtype=subscriptions] ytd-item-section-renderer:not(:first-child):has(a[href*=shorts]):has(ytd-expanded-shelf-contents-renderer),
+[focus-hub-youtube-hide-shorts=true] ytd-browse[page-subtype=subscriptions] ytd-item-section-renderer:has(a[href*=shorts]):has(ytd-expanded-shelf-contents-renderer) ytd-expanded-shelf-contents-renderer,
+[focus-hub-youtube-hide-shorts=true] ytd-browse[page-subtype=subscriptions] ytd-item-section-renderer:has(a[href*=shorts]):has(ytd-expanded-shelf-contents-renderer) #title-container h2,
+[focus-hub-youtube-hide-shorts=true] tp-yt-app-drawer#guide[role=navigation] a[title=Shorts],
+[focus-hub-youtube-hide-shorts=true] ytd-mini-guide-renderer[role=navigation] a[title=Shorts] {
+  display: none !important;
+}
+
+[focus-hub-youtube-hide-comments=true] ytd-comments {
+  display: none !important;
+}
