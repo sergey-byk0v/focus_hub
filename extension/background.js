@@ -231,18 +231,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'TIMER_EXPIRED') {
     (async () => {
-      await sendMessageToOffscreen({ type: 'PLAY_ALERT' });
-      await new Promise(r => setTimeout(r, 1500));
-      await sendMessageToOffscreen({ type: 'STOP' });
-      await closeOffscreen();
-      await clearState();
-      chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'icons/icon48.png',
-        title: 'Timer Expired',
-        message: 'AM modulation has stopped.'
-      });
-      chrome.runtime.sendMessage({ type: 'CAPTURE_ENDED' }).catch(() => {});
+      await handleTimerExpiry();
       sendResponse({ success: true });
     })();
     return true;
@@ -290,35 +279,38 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+async function handleTimerExpiry() {
+  await chrome.storage.local.remove('countdownEndTime');
+  await sendMessageToOffscreen({ type: 'PLAY_ALERT' });
+  await new Promise(r => setTimeout(r, 1500));
+  await sendMessageToOffscreen({ type: 'STOP' });
+  await closeOffscreen();
+  await clearState();
+  chrome.notifications.create({
+    type: 'basic',
+    iconUrl: 'icons/icon48.png',
+    title: 'Timer Expired',
+    message: 'AM modulation has stopped.'
+  });
+  chrome.runtime.sendMessage({ type: 'CAPTURE_ENDED' }).catch(() => {});
+}
+
 // ==================== Alarm Handler ====================
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === 'timer-expiry') {
-    await chrome.storage.local.remove('countdownEndTime');
-    await sendMessageToOffscreen({ type: 'PLAY_ALERT' });
-    await new Promise(r => setTimeout(r, 1500));
-    await sendMessageToOffscreen({ type: 'STOP' });
-    await closeOffscreen();
-    await clearState();
-    chrome.notifications.create({
-      type: 'basic',
-      iconUrl: 'icons/icon48.png',
-      title: 'Timer Expired',
-      message: 'AM modulation has stopped.'
-    });
-    chrome.runtime.sendMessage({ type: 'CAPTURE_ENDED' }).catch(() => {});
+    await handleTimerExpiry();
   }
 });
 
 // ==================== Tab Cleanup ====================
 
-chrome.tabs.onRemoved.addListener((tabId) => {
+chrome.tabs.onRemoved.addListener(async (tabId) => {
   if (capturedTabId === tabId) {
-    chrome.alarms.clear('timer-expiry');
-    chrome.storage.local.remove('countdownEndTime');
-    sendMessageToOffscreen({ type: 'STOP' }).catch(() => {});
-    closeOffscreen();
-    clearState();
+    await chrome.alarms.clear('timer-expiry');
+    await sendMessageToOffscreen({ type: 'STOP' }).catch(() => {});
+    await closeOffscreen();
+    await clearState();
     chrome.runtime.sendMessage({ type: 'CAPTURE_ENDED' }).catch(() => {});
   }
 });

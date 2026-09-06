@@ -141,7 +141,7 @@ const INITIALLY_UNLOCKED = ['dark']; // only Dark unlocked initially
 - **Rows (renderDeepCleanList()):** site domain + `.dc-controls` → one `.dc-chip` per active feature (title case) or a `.dc-chip.faint` "Nothing hidden" pill, plus `[Configure]` (`aria-label="Configure Deep Clean for <domain>"`). Row hover bg via `.dc-site-row:hover`. Rows always render from `SITE_BLOCK_FEATURES` keys — adding a site = one entry there + one `SITE_BLOCK_CONFIG` entry in site-block.js + CSS rules + manifest `content_scripts.matches`; **no popup markup changes**.
 - **Dialog (`#deepCleanModal`):** per-site master switch (`#dcEnabled`) + feature rows (`#dcFeatures`). `openDeepCleanDialog(domain)` seeds from `siteBlocking[domain]`; `updateDeepCleanState()` toggles the `.enabled` class on `#dcFeatures` from the master switch state (and `disabled` on feature inputs). `persistDeepClean()` writes `siteBlocking[domain] = { enabled, [settingKey] }`. Close via ×/backdrop/Escape → `closeDeepCleanDialog()` re-renders the list. `.modal` uses `overscroll-behavior:contain`.
 - **Engine (site-block.js):** content script toggles `focus-hub-<site>-<feature>=true/false` on `<html>`; site-block.css hides via `display:none!important`. Applies on load and on `chrome.storage.onChanged` (both `siteBlocking` and `deepCleanEnabled`). Both the global flag (`deepCleanEnabled === false`) and per-site `enabled` off clear all attributes. Global off removes attributes on every page instantly — pure-CSS hiding means content reappears immediately (no reload needed).
-- **Status:** YouTube live. **Twitch exists UI-only** — `twitch.tv` entry in `SITE_BLOCK_FEATURES` (Hide Chat / Followed Sidebar / Recommended Streams / Related Channels) renders row + dialog, but `SITE_BLOCK_CONFIG`, twitch selectors in site-block.css, and the `*://*.twitch.tv/*` content_scripts match are NOT yet added.
+- **Status:** YouTube live. **Twitch live** — `twitch.tv` in `SITE_BLOCK_FEATURES` + `SITE_BLOCK_CONFIG` + `site-block.css` + manifest. 5 features: Hide Chat, Followed Sidebar, Recommended Streams, Related Channels, Live Channels.
 
 ## Audio System (offscreen.js)
 
@@ -281,7 +281,7 @@ Slot = { id, date: 'YYYY-MM-DD', startMinute, endMinute, label }
 - **Drop on timeline**: `#timeline` gets `.drop-target` accent ring + `.slot-preview` at snapped position; release → `commitTimelineDrop()` creates a 30-min slot labeled with the **task text** (or **card name**), clamped to the visible range, auto-selected. Independent copy — the task/card stays in the deck
 
 ## Version
-- Current: `1.2.1` (manifest.json)
+- Current: `1.2.2` (manifest.json)
 - Release zips in `versions/` folder
 
 The release process is codified in the project skill `.opencode/skill/release-focus-hub/` (auto-loads on "release/publish/bump"); the workflow below is the authoritative source of truth.
@@ -331,7 +331,7 @@ Steps to prepare and share a new release:
 5. **Service worker state** — background.js variables reset on SW idle; reload from storage on each message.
 6. **No remote code** — all audio is client-side, no external assets.
 7. **Tab approval race** — `chrome.storage.session.set` from block page context is not immediately visible to service worker context after Chrome ≥150 update. Keep approval writes in the service worker (the `APPROVE_TAB` message handler writes to `chrome.storage.session`, and `onBeforeNavigate` reads/consumes it in the same SW context, so it's always visible). Approvals live in `chrome.storage.session` (keyed by tabId → array of URLs) so they survive SW termination; `onStartup`/`onInstalled` clear the session to drop stale entries from aborted navigations.
-8. **Twitch is UI-only** — the `twitch.tv` row/dialog render from `SITE_BLOCK_FEATURES`, but without `SITE_BLOCK_CONFIG` + `site-block.css` rules + a `content_scripts.matches` entry no attributes are ever toggled on Twitch. Don't claim Twitch support works until those land.
+8. **Twitch is live** — `twitch.tv` in `SITE_BLOCK_FEATURES` + `SITE_BLOCK_CONFIG` + `site-block.css` + manifest content_scripts matches. CSS selectors use `aria-label` values that may change with Twitch redesigns.
 9. **suggestionsContent fallback** — block.js reads from `chrome.storage.local` first; if empty, fetches the bundled `suggestions.md`. The bundled file is never modified — custom content is stored separately.
 9. **Stepper bounds on text inputs** — From/To are `type="text"` (native number inputs broke rendering); stepper JS must read `getAttribute('min'/'max')` because `input.min` is empty on text inputs.
 10. **Overlap hatch needs two background properties** — the 45° hatch uses `background-color: color-mix(...)` separate from `background-image: repeating-linear-gradient(...)`; putting `color-mix` inside the gradient fails to paint.

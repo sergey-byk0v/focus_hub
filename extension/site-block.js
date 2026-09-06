@@ -10,6 +10,15 @@ const SITE_BLOCK_CONFIG = {
       hideShorts:                { attribute: 'focus-hub-youtube-hide-shorts',                   settingKey: 'hideShorts' },
       hideComments:              { attribute: 'focus-hub-youtube-hide-comments',                 settingKey: 'hideComments' }
     }
+  },
+  'twitch.tv': {
+    attributes: {
+      hideChat:                    { attribute: 'focus-hub-twitch-hide-chat',                    settingKey: 'hideChat' },
+      hideFollowedSidebar:         { attribute: 'focus-hub-twitch-hide-followed-sidebar',         settingKey: 'hideFollowedSidebar' },
+      hideHomepageRecommendations: { attribute: 'focus-hub-twitch-hide-homepage-recommendations', settingKey: 'hideHomepageRecommendations' },
+      hideRelatedChannels:         { attribute: 'focus-hub-twitch-hide-related-channels',         settingKey: 'hideRelatedChannels' },
+      hideLiveChannels:            { attribute: 'focus-hub-twitch-hide-live-channels',            settingKey: 'hideLiveChannels' }
+    }
   }
 };
 const STORAGE_KEY = 'siteBlocking';
@@ -18,7 +27,7 @@ function applySiteBlocking(settings, globalEnabled) {
   const host = window.location.hostname;
   let domain = '';
   for (const d in SITE_BLOCK_CONFIG) {
-    if (host.includes(d)) { domain = d; break; }
+    if (host === d || host.endsWith('.' + d)) { domain = d; break; }
   }
   const config = SITE_BLOCK_CONFIG[domain];
   const root = document.documentElement;

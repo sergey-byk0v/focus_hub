@@ -8,6 +8,7 @@
   --ytd-watch-flexy-max-player-width: calc(
     var(--ytd-watch-flexy-chat-max-height) * var(--ytd-watch-flexy-width-ratio) / var(--ytd-watch-flexy-height-ratio)
   ) !important;
+  --ytd-watch-flexy-sidebar-width: 0px !important;
 }
 [focus-hub-youtube-hide-video-page-suggestions=true] ytd-watch-flexy #secondary {
   display: none !important;
@@ -27,5 +28,27 @@
 }
 
 [focus-hub-youtube-hide-comments=true] ytd-comments {
+  display: none !important;
+}
+
+/* Twitch Deep Clean rules.
+   Selectors use aria-label values — if Twitch renames a section, update here. */
+[focus-hub-twitch-hide-chat=true] .channel-root__right-column {
+  display: none !important;
+}
+
+[focus-hub-twitch-hide-followed-sidebar=true] .side-nav-section[aria-label="Followed Channels"] {
+  display: none !important;
+}
+
+[focus-hub-twitch-hide-homepage-recommendations=true] .side-nav-section[aria-label="Recommended Channels"] {
+  display: none !important;
+}
+
+[focus-hub-twitch-hide-related-channels=true] .side-nav-section[aria-label="Related Channels"] {
+  display: none !important;
+}
+
+[focus-hub-twitch-hide-live-channels=true] .side-nav-section[aria-label="Live Channels"] {
   display: none !important;
 }

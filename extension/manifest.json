@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Focus Hub",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Focus tools: audio for focus, website blocking, and a daily planner.",
   "permissions": [
     "webNavigation",
@@ -30,7 +30,8 @@
   "content_scripts": [
     {
       "matches": [
-        "*://*.youtube.com/*"
+        "*://*.youtube.com/*",
+        "*://*.twitch.tv/*"
       ],
       "js": [
         "site-block.js"
