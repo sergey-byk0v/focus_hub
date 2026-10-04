@@ -587,6 +587,23 @@ body.dragging {
   color: #ef5350;
 }
 
+#goto-reading {
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--border-light, #444);
+  border-radius: 5px;
+  background: var(--surface, #333);
+  color: var(--text-secondary, #b0b0b0);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+#goto-reading:hover {
+  background: var(--surface-hover, #4a4a4a);
+  color: var(--text, #e0e0e0);
+}
+
 /* ==== Slot move / resize / naming ==== */
 
 .slot.dragging {

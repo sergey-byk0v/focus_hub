@@ -329,5 +329,82 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   }
 });
 
+chrome.runtime.onStartup.addListener(async () => {
+  try { await chrome.storage.session.clear(); } catch (_) {}
+  try {
+    chrome.contextMenus.removeAll();
+    chrome.contextMenus.create({
+      id: 'focushub-save-reading',
+      title: 'Save to Focus Hub reading list',
+      contexts: ['page', 'link']
+    });
+  } catch (_) {}
+});
+
+chrome.runtime.onInstalled.addListener(async () => {
+  try { await chrome.storage.session.clear(); } catch (_) {}
+  try {
+    chrome.contextMenus.create({
+      id: 'focushub-save-reading',
+      title: 'Save to Focus Hub reading list',
+      contexts: ['page', 'link']
+    });
+  } catch (_) {}
+});
+
+function readingMenuTitleForUrl(url, saved) {
+  var item = (saved || []).find(function (a) { return a && a.url === url; });
+  if (item && item.status !== 'archived') return 'Move to Focus Hub archive';
+  if (item && item.status === 'archived') return 'Restore in Focus Hub reading list';
+  return 'Save to Focus Hub reading list';
+}
+
+async function refreshReadingMenu(url) {
+  try {
+    if (!url || !/^https?:\/\//i.test(url)) return;
+    var res = await chrome.storage.local.get({ savedArticles: [] });
+    var saved = Array.isArray(res.savedArticles) ? res.savedArticles : [];
+    chrome.contextMenus.update('focushub-save-reading', { title: readingMenuTitleForUrl(url, saved) });
+  } catch (_) {}
+}
+
+chrome.tabs.onActivated.addListener(async (info) => {
+  try {
+    var tab = await chrome.tabs.get(info.tabId);
+    if (tab && tab.url) refreshReadingMenu(tab.url);
+  } catch (_) {}
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab && tab.active && tab.url) refreshReadingMenu(tab.url);
+});
+
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId !== 'focushub-save-reading') return;
+  var url = (info.linkUrl || info.pageUrl || (tab ? tab.url : null) || '').trim();
+  if (!url) return;
+  if (!/^https?:\/\//i.test(url)) return;
+  var title = (tab && tab.title) || url;
+  var res = await chrome.storage.local.get({ savedArticles: [] });
+  var saved = Array.isArray(res.savedArticles) ? res.savedArticles : [];
+  var existing = saved.find(function (a) { return a && a.url === url; });
+  if (existing) {
+    existing.status = existing.status === 'archived' ? 'active' : 'archived';
+    await chrome.storage.local.set({ savedArticles: saved });
+    try {
+      await chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon48.png',
+        title: 'Focus Hub',
+        message: existing.status === 'archived' ? 'Moved to archive' : 'Restored to active'
+      });
+    } catch (_) {}
+  } else {
+    saved.unshift({ title: String(title).slice(0, 240) || url, url: url, addedAt: Date.now(), status: 'active' });
+    await chrome.storage.local.set({ savedArticles: saved });
+  }
+  refreshReadingMenu(url);
+});
+
 loadState();
 loadBlockerState();

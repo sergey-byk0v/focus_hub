@@ -14,6 +14,8 @@ let musicTabId = null;
 let crossoverMode = 'low';
 let enabledTabs = ['timer', 'modulation', 'block', 'themes'];
 let showSuggestions = true;
+let reasonContentMode = 'suggestions'; // 'none'|'suggestions'|'articles'
+
 
 
 const INITIALLY_UNLOCKED = ['dark'];
@@ -116,6 +118,7 @@ const els = {
   themeGrid: document.getElementById('themeGrid'),
   unlockBtn: document.getElementById('unlockBtn'),
   plannerBtn: document.getElementById('plannerBtn'),
+  readingListBtn: document.getElementById('readingListBtn'),
   siteBlockingControls: document.getElementById('siteBlockingControls'),
   deepCleanSiteList: document.getElementById('deepCleanSiteList'),
   deepCleanEnabled: document.getElementById('deepCleanEnabled'),
@@ -553,6 +556,10 @@ els.plannerBtn.addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('planner.html') });
 });
 
+els.readingListBtn.addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('reading-list.html') });
+});
+
 els.frequency.addEventListener('input', () => { updateDisplay(); sendParams(); });
 els.depth.addEventListener('input', () => { updateDisplay(); sendParams(); });
 
@@ -723,7 +730,9 @@ async function loadTabVisibility() {
   } else {
     enabledTabs = ['timer', 'modulation', 'block', 'themes'];
   }
-  document.querySelectorAll('.tab-toggle').forEach(function(cb) {
+
+
+document.querySelectorAll('.tab-toggle').forEach(function(cb) {
     cb.checked = enabledTabs.indexOf(cb.dataset.tab) !== -1;
   });
   updateTabVisibility();
@@ -869,13 +878,40 @@ function unlockRandomTheme() {
 
 els.unlockBtn.addEventListener("click", unlockRandomTheme);
 
-var suggestionsToggle = document.getElementById('showSuggestions');
-if (suggestionsToggle) {
-  suggestionsToggle.addEventListener('change', function() {
-    showSuggestions = suggestionsToggle.checked;
-    chrome.storage.local.set({ showSuggestions: showSuggestions });
-  });
+var modeReasonNoneBtn = document.getElementById('modeReasonNone');
+var modeReasonSuggestionsBtn = document.getElementById('modeReasonSuggestions');
+var modeReasonArticlesBtn = document.getElementById('modeReasonArticles');
+
+function setReasonContentMode(mode) {
+  reasonContentMode = mode;
+  if (mode === 'suggestions') {
+    showSuggestions = true;
+  } else if (mode === 'articles') {
+    showSuggestions = false;
+  } else { // none
+    showSuggestions = false;
+  }
+  if (modeReasonNoneBtn) modeReasonNoneBtn.classList.toggle('active', mode === 'none');
+  if (modeReasonSuggestionsBtn) modeReasonSuggestionsBtn.classList.toggle('active', mode === 'suggestions');
+  if (modeReasonArticlesBtn) modeReasonArticlesBtn.classList.toggle('active', mode === 'articles');
+  var suggestionsHelpRow = document.getElementById('suggestionsHelpRow');
+  var suggestionsEditorBox = document.getElementById('suggestionsEditorBox');
+  var articlesLinkBox = document.getElementById('articlesLinkBox');
+  if (suggestionsHelpRow) suggestionsHelpRow.style.display = mode === 'suggestions' ? '' : 'none';
+  if (suggestionsEditorBox) suggestionsEditorBox.style.display = mode === 'suggestions' ? '' : 'none';
+  if (articlesLinkBox) articlesLinkBox.style.display = mode === 'articles' ? '' : 'none';
+  chrome.storage.local.set({ reasonContentMode: mode, showSuggestions: showSuggestions });
 }
+
+var openReadingListBtn = document.getElementById('openReadingListBtn');
+if (openReadingListBtn) openReadingListBtn.addEventListener('click', function () {
+  chrome.tabs.create({ url: chrome.runtime.getURL('reading-list.html') });
+});
+
+if (modeReasonNoneBtn) modeReasonNoneBtn.addEventListener('click', function() { setReasonContentMode('none'); });
+if (modeReasonSuggestionsBtn) modeReasonSuggestionsBtn.addEventListener('click', function() { setReasonContentMode('suggestions'); });
+if (modeReasonArticlesBtn) modeReasonArticlesBtn.addEventListener('click', function() { setReasonContentMode('articles'); });
+
 
 els.shuffleReasons.addEventListener('change', () => {
   shuffleReasons = els.shuffleReasons.checked;
@@ -952,6 +988,7 @@ if (suggestionsRestoreBtn && suggestionsEditor) {
   });
 }
 
+
 document.querySelectorAll('.tab-toggle').forEach(function(cb) {
   cb.addEventListener('change', function() {
     var tab = cb.dataset.tab;
@@ -984,9 +1021,17 @@ chrome.runtime.onMessage.addListener((message) => {
   await loadTheme();
   await loadThemeUnlocks();
   await loadTabVisibility();
-  var ssResult = await chrome.storage.local.get('showSuggestions');
-  showSuggestions = ssResult.showSuggestions !== undefined ? ssResult.showSuggestions : true;
-  if (suggestionsToggle) suggestionsToggle.checked = showSuggestions;
+  var rcResult = await chrome.storage.local.get(['reasonContentMode', 'showSuggestions']);
+  if (rcResult.reasonContentMode) {
+    reasonContentMode = rcResult.reasonContentMode;
+  } else if (rcResult.showSuggestions !== undefined) {
+    reasonContentMode = rcResult.showSuggestions ? 'suggestions' : 'none';
+  } else {
+    reasonContentMode = 'suggestions';
+  }
+  showSuggestions = (reasonContentMode === 'suggestions');
+  setReasonContentMode(reasonContentMode);
+  try { await chrome.storage.local.remove(['articlesContent', 'articlesUrl']); } catch (_) {}
   var musicResult = await chrome.storage.local.get(['focusMusicUrl', 'musicTabId', 'launchMusicOnStart']);
   if (els.musicUrlInput) els.musicUrlInput.value = musicResult.focusMusicUrl || DEFAULT_MUSIC_URL;
   if (musicResult.musicTabId) musicTabId = musicResult.musicTabId;

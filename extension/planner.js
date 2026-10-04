@@ -495,6 +495,7 @@
   const rangeFromInput = document.getElementById('timeline-from');
   const rangeToInput = document.getElementById('timeline-to');
   const clearSlotsBtn = document.getElementById('clear-slots-btn');
+  const gotoReadingBtn = document.getElementById('goto-reading');
   let selectedSlotId = null;
   let slotDraw = null;
   let slotMove = null;
@@ -1216,4 +1217,13 @@
   }
   loadState();
   scheduleNowLine();
+})();
+
+(function () {
+  var g = document.getElementById('goto-reading');
+  if (g) {
+    g.addEventListener('click', function () {
+      location.href = chrome.runtime.getURL('reading-list.html');
+    });
+  }
 })();

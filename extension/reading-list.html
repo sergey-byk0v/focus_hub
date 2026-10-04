@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Focus Hub — Reading List</title>
+  <link rel="stylesheet" href="planner.css">
+  <style>
+    body { min-height: 100vh; display: flex; flex-direction: column; background: var(--bg, #1a1a1a); }
+    #header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border-light,#444); background:var(--surface,#222); }
+    #header h1 { font-size:1.2rem; margin:0; }
+    .btn { padding:8px 12px; border:1px solid var(--border,#555); border-radius:8px; background:var(--surface,#333); color:var(--text,#ccc); cursor:pointer; font-size:0.9rem; }
+    .btn:hover { background:var(--surface-hover,#444); }
+    .btn.primary { background:var(--accent,#555); color:var(--white,#fff); border:none; }
+    .btn.danger { border-color:var(--danger,#e94560); color:var(--danger,#e94560); }
+    .btn.ghost { background:transparent; }
+    #container { flex:1; display:flex; gap:16px; padding:16px; max-width:900px; margin:0 auto; width:100%; }
+    #sidebar { display:flex; flex-direction:column; gap:8px; min-width:140px; }
+    #sidebar .btn.active { background:var(--accent,#555); color:var(--white,#fff); border-color:transparent; }
+    #main { flex:1; display:flex; flex-direction:column; gap:12px; min-width:0; }
+    #toolbar { display:flex; gap:8px; align-items:center; }
+    #search { flex:none; width:220px; margin-right:auto; padding:8px 12px; border:1px solid var(--border,#555); border-radius:8px; background:var(--surface-alt,#383838); color:var(--text,#e0e0e0); font:inherit; font-size:0.9rem; }
+    #search:focus { outline:none; border-color:var(--accent,#b0b0b0); }
+    #add-url { padding:8px 12px; border:1px solid var(--border,#555); border-radius:8px; background:var(--surface-alt,#383838); color:var(--text,#e0e0e0); font:inherit; font-size:0.9rem; }
+    #add-url:focus { outline:none; border-color:var(--accent,#b0b0b0); }
+    #list { display:flex; flex-direction:column; gap:8px; }
+    .item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border:1px solid var(--border-light,#444); border-radius:10px; background:var(--surface,#222); }
+    .item-main { display:flex; flex-direction:column; gap:4px; flex:1; min-width:0; }
+    .item-title { font-size:0.98rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .item-url { font-size:0.82rem; color:var(--text-muted,#888); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .item-actions { display:flex; gap:6px; align-items:center; }
+    .btn-icon-danger { width:32px; height:32px; padding:0; display:inline-flex; align-items:center; justify-content:center; border:1px solid color-mix(in srgb, #ef5350 55%, transparent); border-radius:8px; background:color-mix(in srgb, #ef5350 12%, transparent); color:#ef5350; cursor:pointer; transition:background 0.15s, color 0.15s; flex-shrink:0; }
+    .btn-icon-danger:hover { background:#ef5350; color:#fff; }
+    .btn-icon-danger svg { width:16px; height:16px; }
+    .empty { text-align:center; color:var(--text-muted,#888); padding:40px; }
+  </style>
+</head>
+<body>
+  <header id="header">
+    <h1>Reading List</h1>
+    <div style="display:flex; gap:6px;">
+      <button id="export-csv" class="btn ghost">Export</button>
+      <label for="import-csv" class="btn ghost" style="cursor:pointer;">Import</label>
+      <input type="file" id="import-csv" accept=".csv,.txt" style="display:none;">
+      <button id="back-planner" class="btn ghost">Planner</button>
+    </div>
+  </header>
+  <main id="container">
+    <nav id="sidebar">
+      <button id="folder-active" class="btn active">Active (0)</button>
+      <button id="folder-archive" class="btn">Archive (0)</button>
+    </nav>
+    <div id="main">
+      <div id="toolbar">
+        <input id="search" type="text" placeholder="Search articles...">
+        <input id="add-url" type="text" placeholder="https://...">
+        <button id="add-btn" class="btn primary">Add</button>
+      </div>
+      <div id="list"></div>
+      <div id="empty" class="empty" style="display:none;">No saved articles</div>
+    </div>
+  </main>
+  <script src="theme-data.js"></script>
+  <script src="reading-list.js"></script>
+</body>
+</html>

@@ -25,10 +25,21 @@
   const suggestionsList = document.getElementById('suggestions-list');
   const suggestedTagEl = document.getElementById('suggested-tag');
   const continueBtn = document.getElementById('continue-btn');
+  const articleUi = document.getElementById('article-ui');
+  const openArticleBtn = document.getElementById('open-article-btn');
+  const articleContinueBtn = document.getElementById('article-continue-btn');
+  const toggleEmbedBtn = null;
+  const articleIframe = null;
 
   var selectedTag = null;
   var suggestionsMap = null;
+  var articlesList = [];
+  var savedArticlesList = [];
+  var currentArticleUrl = null;
+  var reasonContentMode = 'suggestions';
   var showSuggestions = true;
+  var articlesReady = null;
+
 
   var siteDisplay = 'a site';
   if (targetUrl) {
@@ -39,12 +50,17 @@
   siteNameEl.textContent = siteDisplay;
   blockedSiteName.textContent = siteDisplay;
 
-  (async () => {
-    var ssResult = await chrome.storage.local.get({ showSuggestions: true });
-    if (ssResult.showSuggestions === false) showSuggestions = false;
-    if (showSuggestions) {
-      var scResult = await chrome.storage.local.get('suggestionsContent');
-      var md = scResult.suggestionsContent;
+  articlesReady = (async () => {
+    var rcResult = await chrome.storage.local.get({ reasonContentMode: 'suggestions', showSuggestions: true, suggestionsContent: '' });
+    if (rcResult.reasonContentMode) {
+      reasonContentMode = rcResult.reasonContentMode;
+    } else {
+      reasonContentMode = rcResult.showSuggestions !== false ? 'suggestions' : 'none';
+    }
+    showSuggestions = (reasonContentMode === 'suggestions');
+    if (reasonContentMode === 'suggestions') {
+      var scResult = rcResult.suggestionsContent;
+      var md = scResult;
       if (!md) {
         try {
           var resp = await fetch(chrome.runtime.getURL('suggestions.md'));
@@ -52,6 +68,29 @@
         } catch (_) {}
       }
       if (md) suggestionsMap = parseSuggestions(md);
+    } else if (reasonContentMode === 'articles') {
+      var savedRes = await chrome.storage.local.get({ savedArticles: [] });
+      var saved = Array.isArray(savedRes.savedArticles) ? savedRes.savedArticles : [];
+      savedArticlesList = saved.filter(function (a) {
+        return a && a.url && /^https?:\/\//i.test(a.url) && a.status !== 'archived';
+      });
+      var bundled = '';
+      try {
+        var respb = await fetch(chrome.runtime.getURL('articles.md'));
+        bundled = await respb.text();
+      } catch (_) {}
+      var merged = '';
+      if (saved.length > 0) {
+        merged += '# Saved\n';
+        saved.forEach(function (a) {
+          var t = (a.title || a.url || 'Saved article').replace(/[\r\n\[\]()]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || 'Saved article';
+          var u = (a.url || '').trim();
+          if (/^https?:\/\//i.test(u)) merged += '- [' + t + '](' + u + ')\n';
+        });
+        merged += '\n';
+      }
+      if (bundled) merged += bundled;
+      if (merged) articlesList = parseArticles(merged);
     }
   })();
 
@@ -178,8 +217,13 @@
 
     await chrome.storage.local.set({ entries });
 
-    if (showSuggestions && suggestionsMap && suggestionsMap[tag.toLowerCase()]) {
+    if (reasonContentMode === 'suggestions' && suggestionsMap && suggestionsMap[tag.toLowerCase()]) {
       showSuggestionsForTag(tag);
+      return;
+    }
+    if (reasonContentMode === 'articles') {
+      try { await articlesReady; } catch (_) {}
+      showArticleForTag(tag);
       return;
     }
     goToSite();
@@ -241,6 +285,32 @@
     return map;
   }
 
+  function parseArticles(md) {
+    var list = [];
+    var lines = md.split('\n');
+    var currentTag = 'general';
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      var trimmed = line.trim();
+      if (!trimmed) continue;
+      var m = trimmed.match(/^#\s+(.+)/);
+      if (m) {
+        currentTag = m[1].trim();
+        continue;
+      }
+      var l = trimmed.match(/^[-*]\s+\[(.+?)\]\((.+?)\)(.*)/);
+      if (l) {
+        list.push({
+          title: l[1],
+          url: l[2],
+          tag: currentTag,
+          excerpt: (l[3] || '').replace(/^[^\w]*/, '').trim()
+        });
+      }
+    }
+    return list;
+  }
+
   function renderMarkdown(raw) {
     if (!raw) return '';
     var lines = raw.split('\n');
@@ -289,6 +359,70 @@
     if (inList) html += '</ul>';
     return html;
   }
+
+  function showArticleForTag(tag) {
+    reasonUi.style.display = 'none';
+    var savedCandidates = savedArticlesList.filter(function (a) {
+      return a && a.url && /^https?:\/\//i.test(a.url) && a.status !== 'archived';
+    });
+    var candidates;
+    if (savedCandidates.length > 0) {
+      candidates = savedCandidates.map(function (a) {
+        return { title: a.title || a.url, url: a.url, tag: 'Saved', excerpt: '' };
+      });
+    } else {
+      candidates = articlesList.filter(function (a) {
+        return a.tag && a.tag.toLowerCase() === String(tag || '').toLowerCase();
+      });
+      if (candidates.length === 0) {
+        candidates = articlesList.slice();
+      }
+    }
+    candidates = candidates.filter(function (a) {
+      return a && a.url && /^https?:\/\//i.test(a.url);
+    });
+    if (candidates.length === 0) {
+      goToSite();
+      return;
+    }
+    var article = candidates[Math.floor(Math.random() * candidates.length)];
+    currentArticleUrl = article.url;
+    try {
+      chrome.tabs.create({ url: currentArticleUrl });
+    } catch (_) {}
+    if (openArticleBtn) {
+      openArticleBtn.onclick = function () {
+        try {
+          chrome.tabs.create({ url: chrome.runtime.getURL('reading-list.html') });
+        } catch (_) {}
+      };
+    }
+    suggestionsUi.style.display = 'none';
+    articleUi.style.display = 'block';
+    startArticleContinueCountdown(5);
+  }
+
+  function startArticleContinueCountdown(seconds) {
+    if (!articleContinueBtn) { goToSite(); return; }
+    articleContinueBtn.disabled = true;
+    var remaining = seconds;
+    articleContinueBtn.textContent = 'Continue in ' + remaining + 's';
+    var interval = setInterval(function () {
+      remaining--;
+      if (remaining > 0) {
+        articleContinueBtn.textContent = 'Continue in ' + remaining + 's';
+      } else {
+        clearInterval(interval);
+        articleContinueBtn.disabled = false;
+        articleContinueBtn.textContent = 'Continue to site';
+      }
+    }, 1000);
+    articleContinueBtn.onclick = function () {
+      clearInterval(interval);
+      goToSite();
+    };
+  }
+
 
   function inlineMd(text) {
     text = escHtml(text);
