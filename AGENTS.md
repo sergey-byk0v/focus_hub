@@ -20,7 +20,7 @@
 
 ## Release & Update Workflow
 
-The release process is codified in the project skill `.opencode/skill/release-focus-hub/` (auto-loads on "release/publish/bump"); the workflow below is the authoritative source of truth.
+The release process is codified in the project skill `skills/release-focus-hub/`; the workflow below is the authoritative source of truth.
 
 1. **Bump version** in `extension/manifest.json` (patch bump for fixes, minor for features)
 2. **Commit all changes**:
