@@ -552,6 +552,14 @@
       pointer-events: none;
     }
     .home-card.card-tint-music .card-label svg { color: #c4a7e8; }
+    /* Reading list + Planner share one warm hue, distinct from music violet */
+    .home-card.card-tint-reading { --card-accent: #e0b678; }
+    .home-card.card-tint-reading::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(217, 165, 91, 0.14), rgba(217, 165, 91, 0.04));
+      pointer-events: none;
+    }
     .home-card.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 10px; min-height: 56px; }
     .home-card.wide .card-label { margin-bottom: 0; }
     .home-card.music {
@@ -843,17 +851,17 @@
             </button>
           </div>
         </div>
-        <button class="home-card aero-pane wide music card-tint-music" id="playMusicBtn" title="Focus Music">
-          <span class="music-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
-          <span class="card-label">Focus music</span>
-        </button>
-        <button class="home-card aero-pane wide music card-tint-music" id="readingListBtn" title="Open Reading List">
+        <button class="home-card aero-pane music card-tint-reading" id="readingListBtn" title="Open Reading List">
           <span class="music-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
           <span class="card-label">Reading list</span>
         </button>
-        <button class="home-card aero-pane wide music card-tint-music" id="plannerBtn" title="Open Daily Planner">
+        <button class="home-card aero-pane music card-tint-reading" id="plannerBtn" title="Open Daily Planner">
           <span class="music-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg></span>
           <span class="card-label">Planner</span>
+        </button>
+        <button class="home-card aero-pane wide music card-tint-music" id="playMusicBtn" title="Focus Music">
+          <span class="music-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
+          <span class="card-label">Focus music</span>
         </button>
       </div>
     </div>
