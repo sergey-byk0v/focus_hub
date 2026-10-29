@@ -67,7 +67,6 @@ const BUILTIN_PRESETS = [
 const els = {
   captureTarget: document.getElementById('captureTarget'),
   captureBtn: document.getElementById('captureBtn'),
-  controls: document.getElementById('controls'),
   frequency: document.getElementById('frequency'),
   depth: document.getElementById('depth'),
   freqValue: document.getElementById('freqValue'),
@@ -272,6 +271,8 @@ function sendParams() {
       type: 'UPDATE_PARAMS',
       params: getParams()
     });
+    // Keep the Home AM card hint in sync with live slider values
+    renderHomeAM();
   }
   saveSettings();
 }
@@ -324,15 +325,14 @@ function setCapturing(state) {
   if (state) {
     els.captureTarget.textContent = currentTabTitle;
     els.captureBtn.className = 'stop';
-    els.controls.classList.add('enabled');
     sendParams();
   } else {
     // Fix 11: show a helpful default instead of a blank slot
     els.captureTarget.textContent = 'No tab captured';
     els.captureBtn.className = 'start';
-    els.controls.classList.remove('enabled');
     currentTabTitle = '';
   }
+  renderHome();
 }
 
 function formatTime(ms) {
@@ -354,6 +354,7 @@ function displayTick() {
     return;
   }
   els.timerDisplay.textContent = formatTime(remaining);
+  renderHomeTimer();
 }
 
 function startDisplayTick(endTime) {
@@ -370,7 +371,71 @@ function stopDisplayTick() {
   displayEndTime = null;
   els.startBtn.style.display = 'inline-block';
   els.stopBtn.style.display = 'none';
+  renderHomeTimer();
 }
+
+// ==================== Home bento ====================
+
+const homeEls = {
+  card: document.getElementById('cardTimer'),
+  countdown: document.getElementById('homeCountdown'),
+  timerPlay: document.getElementById('homeTimerPlay'),
+  amCard: document.getElementById('cardModulation'),
+  amState: document.getElementById('homeAmState'),
+  amPlay: document.getElementById('homeAmPlay'),
+  title: document.getElementById('homeTitle'),
+  greeting: document.getElementById('homeGreeting')
+};
+
+function renderHomeTimer() {
+  if (!homeEls.countdown) return;
+  homeEls.card.classList.toggle('running', !!displayEndTime);
+  if (displayEndTime) {
+    homeEls.countdown.textContent = formatTime(displayEndTime - Date.now());
+    homeEls.countdown.classList.add('active');
+  } else {
+    homeEls.countdown.textContent = '00:00';
+    homeEls.countdown.classList.remove('active');
+  }
+  homeEls.title.classList.toggle('live', !!displayEndTime);
+  homeEls.greeting.textContent = displayEndTime ? 'Session in progress' : 'Focus board';
+}
+
+function renderHomeAM() {
+  if (!homeEls.amState) return;
+  homeEls.amCard.classList.toggle('running', isCapturing);
+  if (isCapturing) {
+    homeEls.amState.textContent = 'On';
+    homeEls.amState.classList.add('active');
+  } else {
+    homeEls.amState.textContent = 'Off';
+    homeEls.amState.classList.remove('active');
+  }
+}
+
+function renderHome() {
+  renderHomeTimer();
+  renderHomeAM();
+}
+
+// Card → tab navigation; the play chip handles its own action and is excluded.
+// Timer/AM cards are divs, so keyboard activation is handled manually.
+document.querySelectorAll('.home-card[data-goto]').forEach(card => {
+  const go = () => {
+    var radio = document.getElementById('tab' + card.dataset.goto);
+    if (radio) radio.checked = true;
+  };
+  card.addEventListener('click', (e) => {
+    if (e.target.closest('.card-play')) return;
+    go();
+  });
+  card.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target === card) {
+      e.preventDefault();
+      go();
+    }
+  });
+});
 
 function resetTimer() {
   stopDisplayTick();
@@ -399,7 +464,6 @@ function renderSiteList() {
       ? 'Nothing blocked yet — add a site below.'
       : 'Whitelist is empty — everything will be blocked.';
     els.blockedSiteList.appendChild(hint);
-    return;
   }
 
   sites.forEach((site, i) => {
@@ -524,7 +588,8 @@ async function loadBlockingMode() {
   });
 }
 
-els.captureBtn.addEventListener('click', async () => {
+// Shared capture/stop flow: used by the AM panel pill and the Home play chip
+async function toggleCapture(chips) {
   if (isCapturing) {
     await chrome.runtime.sendMessage({ type: 'STOP_CAPTURE' });
     setCapturing(false);
@@ -533,6 +598,7 @@ els.captureBtn.addEventListener('click', async () => {
     if (tabs.length === 0) return;
     currentTabId = tabs[0].id;
 
+    if (chips) chips.visible.disabled = true;
     els.captureBtn.disabled = true;
     els.captureTarget.textContent = 'Starting…';
 
@@ -541,6 +607,7 @@ els.captureBtn.addEventListener('click', async () => {
       tabId: currentTabId
     });
 
+    if (chips) chips.visible.disabled = false;
     els.captureBtn.disabled = false;
 
     if (response.success) {
@@ -550,8 +617,35 @@ els.captureBtn.addEventListener('click', async () => {
       els.captureTarget.textContent = 'Error: ' + (response.error || 'Unknown');
     }
   }
+}
+
+els.captureBtn.addEventListener('click', () => toggleCapture());
+homeEls.amPlay.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleCapture({ visible: homeEls.amPlay });
 });
 
+// Shared timer functions: used by the Timer panel and the Home play chip
+function startCountdownFromInput() {
+  const minutes = parseInt(els.customMinutes.value);
+  const seconds = minutes * 60;
+  if (seconds > 0 && seconds <= 5400) {
+    chrome.runtime.sendMessage({ type: 'START_COUNTDOWN', seconds }, r => {
+      if (r && r.endTime) startDisplayTick(r.endTime);
+    });
+  }
+}
+
+function stopCountdown() {
+  chrome.runtime.sendMessage({ type: 'STOP_COUNTDOWN' });
+  stopDisplayTick();
+  els.timerDisplay.textContent = '00:00';
+}
+
+homeEls.timerPlay.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (displayEndTime) stopCountdown(); else startCountdownFromInput();
+});
 els.plannerBtn.addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('planner.html') });
 });
@@ -661,7 +755,6 @@ els.modeBlockBtn.addEventListener('click', () => {
 
 els.presetBtns.forEach(btn => {
   btn.addEventListener('click', () => {
-    if (!isCapturing) return;
     const seconds = parseInt(btn.dataset.seconds);
     chrome.runtime.sendMessage({ type: 'START_COUNTDOWN', seconds }, r => {
       if (r && r.endTime) startDisplayTick(r.endTime);
@@ -669,33 +762,10 @@ els.presetBtns.forEach(btn => {
   });
 });
 
-els.startBtn.addEventListener('click', async () => {
-  if (!isCapturing) {
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tabs.length === 0) return;
-    const response = await chrome.runtime.sendMessage({
-      type: 'START_CAPTURE',
-      tabId: tabs[0].id
-    });
-    if (!response.success) return;
-    currentTabTitle = tabs[0].title;
-    setCapturing(true, tabs[0].id);
-  }
+// Timer runs independently of modulation capture — no implicit capture here
+els.startBtn.addEventListener('click', startCountdownFromInput);
 
-  const minutes = parseInt(els.customMinutes.value);
-  const seconds = minutes * 60;
-  if (seconds > 0 && seconds <= 5400) {
-    chrome.runtime.sendMessage({ type: 'START_COUNTDOWN', seconds }, r => {
-      if (r && r.endTime) startDisplayTick(r.endTime);
-    });
-  }
-});
-
-els.stopBtn.addEventListener('click', () => {
-  chrome.runtime.sendMessage({ type: 'STOP_COUNTDOWN' });
-  stopDisplayTick();
-  els.timerDisplay.textContent = '00:00';
-});
+els.stopBtn.addEventListener('click', stopCountdown);
 
 function updateTabVisibility() {
   var tabIds = ['timer', 'modulation', 'block', 'themes'];
@@ -736,7 +806,8 @@ document.querySelectorAll('.tab-toggle').forEach(function(cb) {
     cb.checked = enabledTabs.indexOf(cb.dataset.tab) !== -1;
   });
   updateTabVisibility();
-  activateFirstEnabledTab();
+  // Popup always opens on the Home board
+  document.getElementById('tabHome').checked = true;
 }
 
 function renderThemes() {
@@ -1047,6 +1118,7 @@ chrome.runtime.onMessage.addListener((message) => {
     try { var resp = await fetch(chrome.runtime.getURL('suggestions.md')); scResult.suggestionsContent = await resp.text(); } catch (_) {}
   }
   if (suggestionsEditor) suggestionsEditor.value = scResult.suggestionsContent || '';
+  renderHome();
   renderThemes();
   updateUnlockButton();
   renderDeepCleanList();

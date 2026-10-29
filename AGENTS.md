@@ -1,5 +1,7 @@
 # Focus Hub — Agent Documentation
 
+**Current release: v_0_3_0 (manifest 1.4.0)**
+
 ## Agent Instructions
 
 1. **Core Behavior: Search Before You Build**
@@ -68,3 +70,5 @@ The release process is codified in the project skill `skills/release-focus-hub/`
 10. **Stepper bounds on text inputs** — From/To are `type="text"` (native number inputs broke rendering); stepper JS must read `getAttribute('min'/'max')` because `input.min` is empty on text inputs.
 11. **Overlap hatch needs two background properties** — the 45° hatch uses `background-color: color-mix(...)` separate from `background-image: repeating-linear-gradient(...)`; putting `color-mix` inside the gradient fails to paint.
 12. **Zoom-aware timeline math** — every viewport-px → minute conversion divides by `/ zoom / scale`; missing the `zoom` factor makes pointer positions drift when zoom ≠ 1.
+13. **Timer and capture are independent lifecycles** — `STOP_CAPTURE` stops only modulation and must NOT clear `timer-expiry`/`countdownEndTime`; captured-tab close keeps the countdown; timer expiry still ends the whole session. Offscreen doc closes only when no timer is pending (it hosts the alert sound).
+14. **New theme tokens must exist in every `BASE_PALETTES` entry** — `--surface-card`, `--accent-soft`, `--shadow-card(-hover)` are set per-palette in `theme-data.js`; if a palette lacks them, cards keep the dark default under bright themes.

@@ -175,11 +175,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'STOP_CAPTURE') {
     (async () => {
-      await chrome.alarms.clear('timer-expiry');
-      await chrome.storage.local.remove('countdownEndTime');
-      await sendMessageToOffscreen({ type: 'STOP' });
-      await closeOffscreen();
+      // Modulation stops independently of the timer: keep the countdown
+      // running, and only tear down the offscreen doc (alert-sound host)
+      // when no timer session is pending.
+      await sendMessageToOffscreen({ type: 'STOP' }).catch(() => {});
       await clearState();
+      const { countdownEndTime } = await chrome.storage.local.get('countdownEndTime');
+      if (!(countdownEndTime && countdownEndTime > Date.now())) {
+        await closeOffscreen().catch(() => {});
+      }
       sendResponse({ success: true });
     })();
     return true;
@@ -345,11 +349,16 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 chrome.tabs.onRemoved.addListener(async (tabId) => {
   // Clean up expired-session grant so keys don't accumulate
   await chrome.storage.session.remove(String(tabId)).catch(() => {});
-  if (capturedTabId === tabId) {
-    await chrome.alarms.clear('timer-expiry');
+  // Read from storage: SW memory may not be loaded after a restart
+  const { capturedTabId: stored } = await chrome.storage.local.get('capturedTabId');
+  if (stored && Number(stored) === tabId) {
+    // Modulation source died — stop it, but keep the countdown running
     await sendMessageToOffscreen({ type: 'STOP' }).catch(() => {});
-    await closeOffscreen();
     await clearState();
+    const { countdownEndTime } = await chrome.storage.local.get('countdownEndTime');
+    if (!(countdownEndTime && countdownEndTime > Date.now())) {
+      await closeOffscreen().catch(() => {});
+    }
     chrome.runtime.sendMessage({ type: 'CAPTURE_ENDED' }).catch(() => {});
   }
 });

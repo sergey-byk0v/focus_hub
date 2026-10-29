@@ -15,32 +15,38 @@
       *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
     }
     body {
-      --bg: #2a2a2a;
-      --text-on-accent: #2a2a2a;
-      --surface: #333;
-      --surface-alt: #383838;
-      --surface-hover: #4a4a4a;
-      --text: #e0e0e0;
-      --text-secondary: #b0b0b0;
-      --text-muted: #888;
-      --text-label: #bbb;
-      --text-subtle: #999;
-      --text-site: #ccc;
-      --border: #555;
-      --border-light: #444;
-      --border-subtle: #3a3a3a;
-      --accent: #b0b0b0;
-      --accent-hover: #909090;
+      --bg: #242628;
+      --text-on-accent: #0f2418;
+      --surface: #2c2f31;
+      --surface-alt: #323639;
+      --surface-hover: #3d4245;
+      --surface-card: #363a3c;
+      --accent: #5fc98a;
+      --accent-hover: #4bb97a;
+      --accent-soft: rgba(95, 201, 138, 0.18);
+      --text: #e9ebe9;
+      --text-secondary: #b7bcbc;
+      --text-muted: #8d938f;
+      --text-label: #c2c6c3;
+      --text-subtle: #9ba19d;
+      --text-site: #cdd1ce;
+      --border: #484d4a;
+      --border-light: #3b403d;
+      --border-subtle: #34393a;
       --danger: #ff4757;
       --danger-hover: #e63946;
       --danger-text: #ff8a8a; /* Fix 3: danger used as text on surfaces */
       --success: #90ee90;
       --white: #fff;
+      --radius-control: 8px;
+      --radius-card: 12px;
+      --shadow-card: 0 1px 2px rgba(12, 20, 16, 0.28), 0 3px 10px rgba(12, 20, 16, 0.22);
+      --shadow-card-hover: 0 2px 4px rgba(12, 20, 16, 0.3), 0 6px 16px rgba(12, 20, 16, 0.28);
       width: 350px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: var(--bg);
       color: var(--text);
-      padding: 16px;
+      padding: 14px;
       font-size: 14px;
       /* Fix 9: cap height, scroll instead of clipping */
       max-height: 600px;
@@ -129,7 +135,7 @@
       font-size: 14px;
       cursor: pointer;
       transition: background-color, color 0.2s;
-      margin-bottom: 0;
+      margin-bottom: 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -150,11 +156,14 @@
       font-weight: bold;
     }
     #captureBtn.start {
-      background: var(--accent);
-      color: var(--text-on-accent);
+      background: var(--surface-card);
+      color: var(--text);
+      border: 1px solid var(--border-light);
+      box-shadow: var(--shadow-card);
     }
     #captureBtn.start:hover {
-      background: var(--accent-hover);
+      background: var(--surface-hover);
+      border-color: var(--border);
     }
     /* Fix 3: danger fills darkened so white label text passes AA on every palette */
     #captureBtn.stop {
@@ -168,60 +177,23 @@
       opacity: 0.5;
       cursor: not-allowed;
     }
-    .top-row {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 8px;
-    }
-    .top-row #captureBtn {
-      flex: 1;
-      min-width: 0;
-      margin-bottom: 0;
-    }
-    #plannerBtn,
-    #readingListBtn {
-      flex-shrink: 0;
-      width: 42px;
-      padding: 10px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background-color, color, border-color 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--surface-alt);
-      color: var(--text-secondary);
-      border: 1px solid var(--border);
-    }
-    #plannerBtn:hover,
-    #readingListBtn:hover {
-      background: var(--surface-hover);
-      color: var(--text);
-    }
-    #plannerBtn svg,
-    #readingListBtn svg {
-      width: 18px;
-      height: 18px;
-      pointer-events: none;
-    }
+    .home-card.mini { min-height: 76px; }
 
     .controls { }
     .controls.enabled { }
 
     input[name="tab"] { display: none; }
     .tab-panel { display: none; }
+    #tabHome:checked ~ .tab-bar label[for="tabHome"],
     #tabTimer:checked ~ .tab-bar label[for="tabTimer"],
     #tabModulation:checked ~ .tab-bar label[for="tabModulation"],
     #tabBlock:checked ~ .tab-bar label[for="tabBlock"],
-    #tabThemes:checked ~ .tab-bar label[for="tabThemes"] {
-      color: var(--text);
-      border-bottom-color: var(--accent);
-    }
+    #tabThemes:checked ~ .tab-bar label[for="tabThemes"],
     #tabSettings:checked ~ .tab-bar label[for="tabSettings"] {
       color: var(--text);
-      border-bottom-color: var(--accent);
+      background: var(--accent-soft);
     }
+    #tabHome:checked ~ #controls #panelHome { display: block; }
     #tabTimer:checked ~ #controls #panelTimer { display: block; }
     #tabModulation:checked ~ #controls #panelModulation { display: block; }
     #tabBlock:checked ~ #controls #panelBlock { display: block; }
@@ -230,23 +202,35 @@
 
     .tab-bar {
       display: flex;
-      gap: 0;
-      border-bottom: 1px solid var(--border-light);
+      gap: 2px;
       margin-bottom: 12px;
     }
     .tab-label {
-      padding: 6px 8px;
+      padding: 5px 6px 4px;
       cursor: pointer;
       color: var(--text-secondary);
       font-size: 13px;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -1px;
-      transition: color, border-color 0.15s;
+      border-radius: 8px;
+      transition: color 0.15s, background-color 0.15s;
       user-select: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      flex: 1;
+      min-width: 0;
     }
-    .tab-label:hover { color: var(--text); }
-    .tab-label svg { display: block; width: 28px; height: 28px; pointer-events: none; }
-    #labelSettings { margin-left: auto; }
+    .tab-label:hover { color: var(--text); background: var(--surface-alt); }
+    .tab-label svg { display: block; width: 17px; height: 17px; pointer-events: none; }
+    .tab-label .tab-caption {
+      font-size: 10px;
+      line-height: 1.1;
+      letter-spacing: 0.2px;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     .toggle-row svg { width: 16px; height: 16px; flex-shrink: 0; }
 
     .preset-grid-btn {
@@ -274,9 +258,10 @@
       margin-bottom: 6px;
       margin-top: 4px;
       padding: 12px;
-      background: var(--surface);
-      border-radius: 8px;
-      border: 1px solid var(--border);
+      background: var(--surface-card);
+      border-radius: var(--radius-card);
+      border: 1px solid var(--border-light);
+      box-shadow: var(--shadow-card);
     }
     .section-header {
       display: flex;
@@ -372,9 +357,10 @@
       cursor: pointer;
       margin-bottom: 12px;
       padding: 10px 12px;
-      background: var(--surface);
-      border-radius: 8px;
-      border: 1px solid var(--border);
+      background: var(--surface-card);
+      border-radius: var(--radius-card);
+      border: 1px solid var(--border-light);
+      box-shadow: var(--shadow-card);
     }
     .toggle-row input[type="checkbox"] {
       accent-color: var(--accent);
@@ -551,16 +537,18 @@
 
     .timer-section {
       padding: 12px;
-      background: var(--surface);
-      border-radius: 8px;
-      border: 1px solid var(--border);
+      background: var(--surface-card);
+      border-radius: var(--radius-card);
+      border: 1px solid var(--border-light);
+      box-shadow: var(--shadow-card);
     }
     #timerDisplay {
       text-align: center;
-      font-size: 36px;
-      font-weight: bold;
-      color: var(--text-secondary);
-      padding: 4px 0 8px;
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      padding: 6px 0 10px;
       font-variant-numeric: tabular-nums;
     }
     .timer-presets {
@@ -613,6 +601,202 @@
     }
     .timer-btn.danger:hover {
       background: color-mix(in srgb, var(--danger-hover) 62%, #000);
+    }
+
+    /* ==================== Home bento ==================== */
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--text-muted);
+      transition: background-color 0.2s;
+    }
+    #captureBtn .capture-action {
+      font-weight: 600;
+    }
+    #captureBtn.start .status-dot { background: var(--text-muted); }
+    #captureBtn.stop .status-dot {
+      background: var(--accent);
+      animation: status-pulse 2s ease-in-out infinite;
+    }
+    @keyframes status-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(95, 201, 138, 0.45); }
+      50% { box-shadow: 0 0 0 4px rgba(95, 201, 138, 0.18); }
+    }
+
+    .home-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .home-card {
+      text-align: left;
+      padding: 12px;
+      background: var(--surface-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-card);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      min-height: 84px;
+      font: inherit;
+      box-shadow: var(--shadow-card);
+      transition: background-color 0.18s, border-color 0.18s, transform 0.18s, box-shadow 0.18s;
+    }
+    .home-card:hover {
+      background: var(--surface-hover);
+      border-color: var(--border);
+      box-shadow: var(--shadow-card-hover);
+      transform: translateY(-1px);
+    }
+    .home-card:active {
+      transform: translateY(0) scale(0.98);
+      box-shadow: var(--shadow-card);
+    }
+    .card-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .card-label svg { width: 12px; height: 12px; flex-shrink: 0; color: var(--text-muted); transition: color 0.18s; }
+    .home-value {
+      font-size: 21px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.15;
+      font-variant-numeric: tabular-nums;
+    }
+    .home-value.active { color: var(--accent); }
+    /* Action cards: tap card body → open panel, play chip → run feature.
+       Label is its own full-width layer; value + play chip share the row below. */
+    .home-card.action-card { }
+    .card-body {
+      margin-top: auto;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-play {
+      margin-left: auto;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      flex-shrink: 0;
+      background: color-mix(in srgb, var(--card-accent, var(--accent)) 18%, transparent);
+      color: var(--card-accent, var(--accent));
+      transition: background-color 0.15s, transform 0.15s;
+    }
+    .card-play:hover {
+      background: color-mix(in srgb, var(--card-accent, var(--accent)) 30%, transparent);
+      transform: scale(1.08);
+    }
+    .card-play:active { transform: scale(0.92); }
+    .card-play:disabled { opacity: 0.5; cursor: not-allowed; }
+    .card-play svg { width: 17px; height: 17px; pointer-events: none; }
+    .card-play .ic-stop { display: none; }
+    .home-card.running .card-play .ic-play { display: none; }
+    .home-card.running .card-play .ic-stop { display: block; }
+    /* Per-card hue anchors: timers follow the theme accent, others are fixed hues */
+    .home-card.card-tint-timer {
+      --card-accent: var(--accent);
+      background: color-mix(in srgb, var(--accent) 9%, var(--surface-card));
+      border-color: color-mix(in srgb, var(--accent) 26%, var(--border-light));
+    }
+    .home-card.card-tint-timer .card-label svg { color: var(--accent); }
+    .home-card.card-tint-timer:hover {
+      background: color-mix(in srgb, var(--accent) 14%, var(--surface-hover));
+      border-color: color-mix(in srgb, var(--accent) 36%, var(--border-light));
+    }
+    .home-card.card-tint-am {
+      --card-accent: #8fb9e6;
+      background: color-mix(in srgb, #74a6d8 8%, var(--surface-card));
+      border-color: color-mix(in srgb, #74a6d8 26%, var(--border-light));
+    }
+    .home-card.card-tint-am .card-label svg { color: #8fb9e6; }
+    .home-card.card-tint-am:hover {
+      background: color-mix(in srgb, #74a6d8 13%, var(--surface-hover));
+      border-color: color-mix(in srgb, #74a6d8 36%, var(--border-light));
+    }
+    .home-card.card-tint-music {
+      --card-accent: #b595e0;
+      background: color-mix(in srgb, #b595e0 8%, var(--surface-card));
+      border-color: color-mix(in srgb, #b595e0 26%, var(--border-light));
+    }
+    .home-card.card-tint-music .card-label svg { color: #c4a7e8; }
+    .home-card.card-tint-music:hover {
+      background: color-mix(in srgb, #b595e0 13%, var(--surface-hover));
+      border-color: color-mix(in srgb, #b595e0 36%, var(--border-light));
+    }
+    .home-card.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 10px; min-height: 56px; }
+    .home-card.wide .card-label { margin-bottom: 0; }
+    .home-card.music {
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+      min-height: 56px;
+    }
+    .home-card.music .music-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--card-accent, var(--accent)) 16%, transparent);
+      color: var(--card-accent, var(--accent));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .home-card.music:active .music-icon { transform: scale(0.94); }
+    .home-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.2px;
+      margin: 2px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .home-title .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+      display: none;
+    }
+    .home-title.live .live-dot { display: inline-block; }
+    .home-footer {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .input-suffix {
+      font-size: 12px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      user-select: none;
+    }
+    .row-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
     }
 
     #customMinutes::-webkit-inner-spin-button,
@@ -821,51 +1005,82 @@
   </style>
 </head>
 <body>
-  <input type="radio" name="tab" id="tabTimer" checked>
+  <input type="radio" name="tab" id="tabHome" checked>
+  <input type="radio" name="tab" id="tabTimer">
   <input type="radio" name="tab" id="tabModulation">
   <input type="radio" name="tab" id="tabBlock">
   <input type="radio" name="tab" id="tabThemes">
   <input type="radio" name="tab" id="tabSettings">
 
-  <div class="top-row">
-    <button id="captureBtn" class="start">
-      <span class="capture-action">Capture</span>
-      <span id="captureTarget">No tab captured</span>
-    </button>
-    <button id="readingListBtn" title="Open Reading List" aria-label="Open Reading List">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-    </button>
-    <button id="plannerBtn" title="Open Daily Planner" aria-label="Open Daily Planner">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg>
-    </button>
-  </div>
-
-  <div class="music-row" style="display:flex; margin-top:10px;">
-    <button id="playMusicBtn" class="timer-btn" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; background:var(--surface-alt); border:1px solid var(--border); color:var(--text-secondary); font-size:12px; font-weight:normal; padding:6px 10px;">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-      Focus Music
-    </button>
-  </div>
-
   <div class="tab-bar">
+    <label for="tabHome" class="tab-label" id="labelHome" aria-label="Home tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+      <span class="tab-caption">Home</span>
+    </label>
     <label for="tabTimer" class="tab-label" id="labelTimer" aria-label="Timer tab">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></svg>
+      <span class="tab-caption">Timer</span>
     </label>
     <label for="tabModulation" class="tab-label" id="labelModulation" aria-label="Modulation tab">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>
+      <span class="tab-caption">AM</span>
     </label>
     <label for="tabBlock" class="tab-label" id="labelBlock" aria-label="Blocking tab">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span class="tab-caption">Block</span>
     </label>
     <label for="tabThemes" class="tab-label" id="labelThemes" aria-label="Themes tab">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/></svg>
+      <span class="tab-caption">Themes</span>
     </label>
     <label for="tabSettings" class="tab-label" id="labelSettings" aria-label="Settings tab">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg>
+      <span class="tab-caption">More</span>
     </label>
   </div>
 
   <div id="controls" class="controls">
+    <div class="tab-panel" id="panelHome">
+      <div class="home-title" id="homeTitle">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span id="homeGreeting">Focus board</span>
+      </div>
+      <div class="home-grid">
+        <div class="home-card card-tint-timer action-card" id="cardTimer" data-goto="Timer" role="button" tabindex="0" title="Open timer">
+          <span class="card-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="14" r="8"/><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/></svg>Focus timer</span>
+          <div class="card-body">
+            <span class="home-value" id="homeCountdown">00:00</span>
+            <button class="card-play" id="homeTimerPlay" title="Start timer">
+              <svg class="ic-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3" fill="currentColor" stroke="none"/></svg>
+              <svg class="ic-stop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="home-card card-tint-am action-card" id="cardModulation" data-goto="Modulation" role="button" tabindex="0" title="Open AM modulation">
+          <span class="card-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>AM modulation</span>
+          <div class="card-body">
+            <span class="home-value" id="homeAmState">Off</span>
+            <button class="card-play" id="homeAmPlay" title="Start AM modulation">
+              <svg class="ic-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3" fill="currentColor" stroke="none"/></svg>
+              <svg class="ic-stop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/></svg>
+            </button>
+          </div>
+        </div>
+        <button class="home-card mini" id="readingListBtn" title="Open Reading List">
+          <span class="card-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Reading list</span>
+          <span class="home-value">Open</span>
+        </button>
+        <button class="home-card mini" id="plannerBtn" title="Open Daily Planner">
+          <span class="card-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg>Planner</span>
+          <span class="home-value">Open</span>
+        </button>
+        <button class="home-card wide music card-tint-music" id="playMusicBtn" title="Focus Music">
+          <span class="music-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
+          <span class="card-label">Focus music</span>
+        </button>
+      </div>
+    </div>
+
     <div class="tab-panel" id="panelTimer">
       <div class="timer-section">
         <div id="timerDisplay">00:00</div>
@@ -878,7 +1093,7 @@
           </div>
           <div class="timer-actions">
             <input type="number" id="customMinutes" name="customMinutes" min="1" max="90" value="10" placeholder="10" aria-label="Minutes" autocomplete="off">
-            <span style="font-size:12px;color:var(--text-muted);margin-left:2px;flex-shrink:0;">min</span>
+            <span class="input-suffix" aria-hidden="true">min</span>
             <button id="startBtn" class="timer-btn primary">Start</button>
             <button id="stopBtn" class="timer-btn danger" style="display:none">Stop</button>
           </div>
@@ -887,12 +1102,17 @@
     </div>
 
     <div class="tab-panel" id="panelModulation">
+      <button id="captureBtn" class="start" title="Capture tab audio for modulation">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span class="capture-action">Tab audio</span>
+        <span id="captureTarget">No tab captured</span>
+      </button>
       <div class="section-box">
         <h2 class="section-title">Presets</h2>
         <div id="presetGrid"></div>
-        <div style="display:flex; gap:6px; margin-top:8px;">
+        <div class="row-actions">
           <input type="text" id="presetNameInput" name="presetName" placeholder="Preset name…" aria-label="Preset name" autocomplete="off" style="flex:1; padding:5px 6px; background:var(--surface-alt); color:var(--text); border:1px solid var(--border); border-radius:6px; font-size:12px;">
-          <button id="savePresetBtn" class="timer-btn primary" style="font-size:12px; white-space:nowrap;">Save</button>
+          <button id="savePresetBtn" class="timer-btn primary">Save</button>
         </div>
       </div>
 
