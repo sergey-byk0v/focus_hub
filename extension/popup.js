@@ -1059,9 +1059,6 @@ chrome.storage.local.get('userPresets', result => {
 
 chrome.runtime.sendMessage({ type: 'QUERY_STATUS' }, (response) => {
   if (response && response.capturing) {
-    chrome.runtime.sendMessage({ type: 'QUERY_COUNTDOWN' }, r => {
-      if (r && r.active && r.endTime) startDisplayTick(r.endTime);
-    });
     chrome.tabs.get(response.tabId, (tab) => {
       if (!chrome.runtime.lastError) {
         currentTabTitle = tab.title;
@@ -1069,6 +1066,11 @@ chrome.runtime.sendMessage({ type: 'QUERY_STATUS' }, (response) => {
       setCapturing(true, response.tabId);
     });
   }
+  // Always restore the countdown display, even if capture was already stopped
+  // by a lost alarm — avoids showing 00:00 while time is actually remaining.
+  chrome.runtime.sendMessage({ type: 'QUERY_COUNTDOWN' }, r => {
+    if (r && r.active && r.endTime) startDisplayTick(r.endTime);
+  });
 });
 
 

@@ -85,7 +85,12 @@ async function loadBlockerState() {
 }
 
 chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
-  if (details.frameId !== 0) return;
+  // Recent Chrome fires repeated top-level events for one navigation
+  // (prerender/bfcache activation, redirect chains, non-zero prerender frameIds).
+  // Filter to the active outermost frame instead of relying on frameId === 0.
+  if (details.documentLifecycle && details.documentLifecycle !== 'active') return;
+  if (details.frameType && details.frameType !== 'outermost_frame') return;
+  if (details.frameId !== 0 && details.frameType === undefined) return;
 
   if (blocklistDomains.length === 0 && whitelistDomains.length === 0) {
     const result = await chrome.storage.local.get(['blocklistDomains', 'whitelistDomains', 'listMode', 'focusMusicUrl']);
@@ -111,8 +116,10 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
     const key = String(details.tabId);
 
     const { [key]: grant } = await chrome.storage.session.get(key);
+    // Do NOT consume the grant: Chrome can fire onBeforeNavigate repeatedly for one
+    // navigation (redirect chains, prerender activation) and consuming on first use
+    // re-blocks the site instantly. The grant self-expires after APPROVAL_WINDOW_MS.
     if (grant && grant.expires > Date.now() && sameDomain(grant.domain, hostname)) {
-      await chrome.storage.session.remove(key);
       return;
     }
 
@@ -189,6 +196,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'QUERY_STATUS') {
     (async () => {
+      // Read from storage, not memory: after a SW restart the async loadState()
+      // may not have applied capturedTabId yet when the popup asks first.
       const result = await chrome.storage.local.get("capturedTabId");
       const tabId = result.capturedTabId;
       sendResponse({ capturing: !!tabId, tabId });
@@ -220,6 +229,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const result = await chrome.storage.local.get('countdownEndTime');
       const endTime = result.countdownEndTime;
       if (endTime && endTime > Date.now()) {
+        // Alarms can be lost across browser restarts while endTime survives;
+        // re-create from remaining time so expiry still fires.
+        const alarm = await chrome.alarms.get('timer-expiry').catch(() => null);
+        if (!alarm) {
+          await chrome.alarms.create('timer-expiry', { delayInMinutes: (endTime - Date.now()) / 60000 });
+        }
         sendResponse({ active: true, endTime });
       } else {
         if (endTime) await chrome.storage.local.remove('countdownEndTime');
@@ -280,18 +295,40 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function handleTimerExpiry() {
-  await chrome.storage.local.remove('countdownEndTime');
-  await sendMessageToOffscreen({ type: 'PLAY_ALERT' });
-  await new Promise(r => setTimeout(r, 1500));
-  await sendMessageToOffscreen({ type: 'STOP' });
-  await closeOffscreen();
+  const done = (p) => p.catch(() => {});
+  await chrome.storage.local.remove('countdownEndTime').catch(() => {});
+  // Each step is independent: a missing/unresponsive offscreen document must
+  // never abort cleanup, or the capture keeps running forever with no alert.
+  await done(sendMessageToOffscreen({ type: 'STOP' }));
+  await done(closeOffscreen());
   await clearState();
-  chrome.notifications.create({
-    type: 'basic',
-    iconUrl: 'icons/icon48.png',
-    title: 'Timer Expired',
-    message: 'AM modulation has stopped.'
-  });
+  try {
+    await chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon48.png',
+      title: 'Timer Expired',
+      message: 'AM modulation has stopped.'
+    });
+  } catch (_) {}
+  try {
+    // Alert sound runs last so nothing above can prevent the stop sequence.
+    const contexts = await chrome.runtime.getContexts({
+      contextTypes: ['OFFSCREEN_DOCUMENT'],
+      documentUrls: [OFFSCREEN_URL]
+    });
+    if (contexts.length === 0) {
+      await chrome.offscreen.createDocument({
+        url: OFFSCREEN_URL,
+        reasons: ['AUDIO_PLAYBACK'],
+        justification: 'Play timer expiry alert tone'
+      });
+      await new Promise(r => setTimeout(r, 100));
+    }
+    await sendMessageToOffscreen({ type: 'PLAY_ALERT' }).catch(() => {});
+    await new Promise(r => setTimeout(r, 1500));
+    await done(sendMessageToOffscreen({ type: 'STOP' }));
+    await done(closeOffscreen());
+  } catch (_) {}
   chrome.runtime.sendMessage({ type: 'CAPTURE_ENDED' }).catch(() => {});
 }
 
@@ -306,6 +343,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 // ==================== Tab Cleanup ====================
 
 chrome.tabs.onRemoved.addListener(async (tabId) => {
+  // Clean up expired-session grant so keys don't accumulate
+  await chrome.storage.session.remove(String(tabId)).catch(() => {});
   if (capturedTabId === tabId) {
     await chrome.alarms.clear('timer-expiry');
     await sendMessageToOffscreen({ type: 'STOP' }).catch(() => {});
@@ -318,18 +357,6 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 // ==================== Startup ====================
 
 chrome.runtime.onStartup.addListener(async () => {
-  await chrome.storage.session.clear();
-  maybeAutoOpenMusic();
-});
-
-chrome.runtime.onInstalled.addListener(async (details) => {
-  await chrome.storage.session.clear();
-  if (details.reason === 'install' || details.reason === 'update') {
-    maybeAutoOpenMusic();
-  }
-});
-
-chrome.runtime.onStartup.addListener(async () => {
   try { await chrome.storage.session.clear(); } catch (_) {}
   try {
     chrome.contextMenus.removeAll();
@@ -339,9 +366,10 @@ chrome.runtime.onStartup.addListener(async () => {
       contexts: ['page', 'link']
     });
   } catch (_) {}
+  maybeAutoOpenMusic();
 });
 
-chrome.runtime.onInstalled.addListener(async () => {
+chrome.runtime.onInstalled.addListener(async (details) => {
   try { await chrome.storage.session.clear(); } catch (_) {}
   try {
     chrome.contextMenus.create({
@@ -350,6 +378,9 @@ chrome.runtime.onInstalled.addListener(async () => {
       contexts: ['page', 'link']
     });
   } catch (_) {}
+  if (details.reason === 'install' || details.reason === 'update') {
+    maybeAutoOpenMusic();
+  }
 });
 
 function readingMenuTitleForUrl(url, saved) {

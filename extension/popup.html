@@ -584,6 +584,7 @@
     .timer-actions {
       display: flex;
       gap: 6px;
+      align-items: center;
     }
     .timer-actions input {
       flex: 1;
@@ -870,13 +871,13 @@
         <div id="timerDisplay">00:00</div>
         <div id="countdownControls">
           <div class="timer-presets">
-            <button class="preset-btn" data-seconds="900">15m</button>
+            <button class="preset-btn" data-seconds="600">10m</button>
             <button class="preset-btn" data-seconds="1800">30m</button>
             <button class="preset-btn" data-seconds="3600">60m</button>
             <button class="preset-btn" data-seconds="5400">90m</button>
           </div>
           <div class="timer-actions">
-            <input type="number" id="customMinutes" name="customMinutes" min="1" max="90" value="15" placeholder="15" aria-label="Minutes" autocomplete="off">
+            <input type="number" id="customMinutes" name="customMinutes" min="1" max="90" value="10" placeholder="10" aria-label="Minutes" autocomplete="off">
             <span style="font-size:12px;color:var(--text-muted);margin-left:2px;flex-shrink:0;">min</span>
             <button id="startBtn" class="timer-btn primary">Start</button>
             <button id="stopBtn" class="timer-btn danger" style="display:none">Stop</button>
