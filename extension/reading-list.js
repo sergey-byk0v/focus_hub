@@ -64,7 +64,7 @@
     emptyEl.style.display = 'none';
     filtered.forEach(function (a, i) {
       const item = document.createElement('div');
-      item.className = 'item';
+      item.className = 'item aero-strip';
       const main = document.createElement('div');
       main.className = 'item-main';
       const titleText = (a.title || '').trim();
@@ -76,13 +76,13 @@
       const actions = document.createElement('div');
       actions.className = 'item-actions';
       const openBtn = document.createElement('button');
-      openBtn.className = 'btn';
+      openBtn.className = 'btn aero-btn glass';
       openBtn.textContent = 'Open';
       openBtn.addEventListener('click', function () {
         if (a.url) chrome.tabs.create({ url: a.url });
       });
       const moveBtn = document.createElement('button');
-      moveBtn.className = 'btn';
+      moveBtn.className = 'btn aero-btn glass';
       moveBtn.textContent = folder === 'archive' ? 'Restore' : 'Archive';
       moveBtn.addEventListener('click', async function () {
         a.status = folder === 'archive' ? 'active' : 'archived';

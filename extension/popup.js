@@ -243,7 +243,7 @@ function renderPresets() {
 
     const btn = document.createElement('button');
     btn.textContent = preset.name;
-    btn.className = 'preset-grid-btn';
+    btn.className = 'preset-grid-btn aero-btn glass';
     btn.style.flex = '1';
     btn.addEventListener('click', () => applyPreset(preset));
     wrapper.appendChild(btn);
@@ -324,12 +324,12 @@ function setCapturing(state) {
   isCapturing = state;
   if (state) {
     els.captureTarget.textContent = currentTabTitle;
-    els.captureBtn.className = 'stop';
+    els.captureBtn.className = 'stop aero-btn danger';
     sendParams();
   } else {
     // Fix 11: show a helpful default instead of a blank slot
     els.captureTarget.textContent = 'No tab captured';
-    els.captureBtn.className = 'start';
+    els.captureBtn.className = 'start aero-strip';
     currentTabTitle = '';
   }
   renderHome();
@@ -817,7 +817,7 @@ function renderThemes() {
     if (theme.secret && !allNormalUnlocked) return;
     const isUnlocked = unlockedThemeIds.has(theme.id);
     const btn = document.createElement("button");
-    btn.className = "theme-btn";
+    btn.className = "theme-btn aero-strip";
     if (theme.id === selectedThemeId) btn.classList.add("active");
     if (!isUnlocked) btn.classList.add("locked");
 
@@ -1233,7 +1233,7 @@ async function renderDeepCleanList() {
     controls.appendChild(badge);
 
     const btn = document.createElement('button');
-    btn.className = 'dc-config-btn';
+    btn.className = 'dc-config-btn aero-btn glass';
     btn.textContent = 'Configure';
     btn.setAttribute('aria-label', 'Configure Deep Clean for ' + domain);
     btn.addEventListener('click', () => openDeepCleanDialog(domain));

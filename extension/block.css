@@ -15,12 +15,9 @@ body {
   --text-muted-extra: #555;
   --border: #555;
   --border-light: #444;
-  --accent: #555;
-  --accent-hover: #666;
   --danger: #e94560;
   --white: #fff;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: var(--bg);
   color: var(--text);
   display: flex;
   justify-content: center;
@@ -29,12 +26,10 @@ body {
 }
 
 .container {
-  background: var(--surface);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 48px 40px 32px;
   max-width: 500px;
   width: 90%;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   text-align: center;
 }
 
@@ -65,25 +60,8 @@ body {
 
 .tag-btn {
   padding: 10px 18px;
-  border: 2px solid var(--border-light);
-  border-radius: 20px;
-  background: var(--surface);
-  color: var(--text-secondary);
   font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.15s;
   font-family: inherit;
-}
-
-.tag-btn:hover {
-  border-color: var(--text-muted);
-  color: var(--text);
-}
-
-.tag-btn.selected {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--white);
 }
 
 #otherInputWrapper {
@@ -98,20 +76,16 @@ body {
 }
 
 .stats-toggle {
-  background: transparent;
-  border: 1px solid var(--border);
   color: var(--text-muted);
   padding: 6px 16px;
-  border-radius: 6px;
   cursor: pointer;
   font-size: 0.85rem;
-  transition: all 0.15s;
+  transition: color 0.15s;
   font-family: inherit;
   width: 100%;
 }
 
 .stats-toggle:hover {
-  border-color: var(--text-subtle);
   color: var(--text-subtle);
 }
 
@@ -132,19 +106,14 @@ body {
 }
 
 .clear-btn {
-  background: transparent;
-  border: 1px solid var(--border);
   color: var(--text-muted);
   padding: 4px 12px;
-  border-radius: 6px;
   cursor: pointer;
   font-size: 0.8rem;
-  transition: all 0.15s;
   font-family: inherit;
 }
 
 .clear-btn:hover {
-  border-color: var(--danger);
   color: var(--danger);
 }
 
@@ -174,15 +143,16 @@ body {
 .stats-bar-track {
   flex: 1;
   height: 16px;
-  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 75%, transparent);
+  border: 1px solid rgba(0, 0, 0, 0.5);
   border-radius: 8px;
   overflow: hidden;
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.35), inset 0 -1px 0 var(--glass-sheen);
 }
 
 .stats-bar-fill {
   height: 100%;
   border-radius: 8px;
-  background: var(--accent);
   transition: width 0.3s;
   min-width: 2px;
 }
@@ -198,44 +168,31 @@ body {
 #reason-input {
   width: 100%;
   padding: 14px;
-  border: 2px solid var(--border-light);
-  border-radius: 10px;
-  background: var(--bg);
-  color: var(--text);
   font-size: 1rem;
   font-family: inherit;
   resize: vertical;
-  outline: none;
-  transition: border-color 0.2s;
 }
 
-#reason-input:focus {
-  border-color: var(--text-muted);
-}
-
-#proceed-btn {
+#proceed-btn,
+#continue-btn,
+#close-btn,
+#open-article-btn,
+#article-continue-btn {
   display: block;
   width: 100%;
   padding: 14px;
   margin-top: 16px;
-  border: none;
-  border-radius: 10px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  background: var(--accent);
-  color: var(--white);
-  transition: background 0.2s;
+  font-family: inherit;
 }
 
-#proceed-btn:disabled {
-  background: var(--surface-disabled);
-  cursor: not-allowed;
+#proceed-btn:disabled,
+#continue-btn:disabled,
+#open-article-btn:disabled,
+#article-continue-btn:disabled {
   opacity: 0.5;
-}
-
-#proceed-btn:not(:disabled):hover {
-  background: var(--accent-hover);
 }
 
 .actions {
@@ -248,18 +205,13 @@ body {
 
 #export-btn {
   margin-top: 16px;
-  background: transparent;
-  border: 1px solid var(--border);
   color: var(--text-muted);
   padding: 8px 18px;
-  border-radius: 6px;
   cursor: pointer;
   font-size: 0.85rem;
-  transition: all 0.2s;
 }
 
 #export-btn:hover {
-  border-color: var(--text-subtle);
   color: var(--text-subtle);
 }
 
@@ -270,24 +222,7 @@ body {
   margin-bottom: 12px;
 }
 
-#close-btn {
-  display: block;
-  width: 100%;
-  padding: 14px;
-  margin-top: 24px;
-  border: none;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  background: var(--accent);
-  color: var(--white);
-  transition: background 0.2s;
-}
-
-#close-btn:hover {
-  background: var(--accent-hover);
-}
+#close-btn { margin-top: 24px; }
 
 #suggestions-ui {
   text-align: left;
@@ -312,60 +247,7 @@ body {
   margin-bottom: 20px;
 }
 
-.suggestion-item {
-  display: block;
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: var(--bg);
-  border: 1px solid var(--border-light);
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  text-decoration: none;
-  transition: all 0.15s;
-  cursor: pointer;
-}
-
-.suggestion-item:hover {
-  border-color: var(--accent);
-  color: var(--text);
-  background: var(--surface);
-}
-
-.suggestion-item.link {
-  color: var(--accent);
-}
-
-.suggestion-item.link:hover {
-  color: var(--accent-hover);
-}
-
-.suggestion-item.text {
-  cursor: default;
-}
-
-#continue-btn {
-  display: block;
-  width: 100%;
-  padding: 14px;
-  border: none;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  background: var(--accent);
-  color: var(--white);
-  transition: background 0.2s;
-  font-family: inherit;
-}
-
-#continue-btn:hover {
-  background: var(--accent-hover);
-}
-#continue-btn:disabled {
-  background: var(--surface-disabled);
-  cursor: not-allowed;
-  opacity: 0.5;
-}
+#continue-btn { margin-top: 0; }
 
 
 #suggestions-list h2 {

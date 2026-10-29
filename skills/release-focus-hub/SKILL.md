@@ -80,6 +80,5 @@ git push
 
 ## Storage of this skill
 
-This is a **project** skill — it lives at `.opencode/skill/release-focus-hub/`
-and only surfaces inside the Focus Hub repo. It is NOT committed to the
-extension source; it's local opencode config for this project.
+This is a **project** skill, git-tracked at `skills/release-focus-hub/` so it
+ships with the repo. It only surfaces inside the Focus Hub repo.

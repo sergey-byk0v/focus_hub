@@ -1,6 +1,6 @@
 # Focus Hub — Agent Documentation
 
-**Current release: v_0_3_0 (manifest 1.4.0)**
+**Current release: v_0_4_0 (manifest 1.5.0)**
 
 ## Agent Instructions
 
@@ -20,9 +20,16 @@
    - Include brief comments only where the logic is complex or non-obvious.
    - If you used an existing library based on Section 1, mention it in a single-line comment above the implementation.
 
+4. **Single-Source Styling (Aero design system)**
+   - All visual recipes — glass panes/strips, gloss buttons, groove fields, slide switches, aurora backdrop — live ONLY in `extension/aero.css` as utility classes: `.aero-pane`, `.aero-pane-lite`, `.aero-strip`, `.aero-btn` (`.glass` = neutral chip, `.danger` = red), `.aero-seg` (segmented control), `.aero-field`, `input.aero-switch`, `.aero-vfill`, plus `body.aero` element defaults and the aurora backdrop.
+   - Page CSS (popup.html, block.css, reading-list.html) keeps layout/spacing/typography only — never re-declare gradient/shadow/glass recipe values.
+   - Selected/active states of neutral chips promote to accent gloss via the grouped selector in aero.css (`.aero-btn.glass.selected/.active`, `.aero-seg button.active`) — do not copy the gloss recipe into state rules.
+   - Dynamically created elements get their aero classes at creation time (popup.js: preset/theme/dc-config buttons, capture state swap; block.js: chart fills; reading-list.js: item rows, row buttons).
+   - `aero.css` must load BEFORE page styles; themes recolor everything through `--accent`/`--glass-*` tokens from `theme-data.js` — never hardcode hue values in page CSS (fixed card hues via `--card-accent`/`--ac` hooks are the exception).
+
 ## Release & Update Workflow
 
-The release process is codified in the project skill `skills/release-focus-hub/`; the workflow below is the authoritative source of truth.
+The release process is codified in the project skill `skills/release-focus-hub/`; the workflow below is the authoritative source of truth. For reviewing visual styling before implementing it, use the project skill `skills/visual-prototype/` (HTML mocks in `prototypes/`, headless screenshots, pixel-verification).
 
 1. **Bump version** in `extension/manifest.json` (patch bump for fixes, minor for features)
 2. **Commit all changes**:
@@ -72,3 +79,4 @@ The release process is codified in the project skill `skills/release-focus-hub/`
 12. **Zoom-aware timeline math** — every viewport-px → minute conversion divides by `/ zoom / scale`; missing the `zoom` factor makes pointer positions drift when zoom ≠ 1.
 13. **Timer and capture are independent lifecycles** — `STOP_CAPTURE` stops only modulation and must NOT clear `timer-expiry`/`countdownEndTime`; captured-tab close keeps the countdown; timer expiry still ends the whole session. Offscreen doc closes only when no timer is pending (it hosts the alert sound).
 14. **New theme tokens must exist in every `BASE_PALETTES` entry** — `--surface-card`, `--accent-soft`, `--shadow-card(-hover)` are set per-palette in `theme-data.js`; if a palette lacks them, cards keep the dark default under bright themes.
+15. **No semi-transparent borders on rounded gradient elements** — Chrome (Skia) bleeds the gradient's FIRST stop as a 1px light line just below the box's bottom edge when the border (or border-color) has alpha (`transparent`, `rgba(...)`, `color-mix(... , transparent)`). Gloss buttons/tab pills/knobs therefore use `border: none`; glass panes/strips are safe only because their bottom border is opaque dark (`border-bottom-color: rgba(0,0,0,0.45)` in aero.css). Keep it that way.

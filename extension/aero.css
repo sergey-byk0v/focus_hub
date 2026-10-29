@@ -1,0 +1,399 @@
+/* ============================================================
+   Aero (Windows 7) design system — SINGLE SOURCE OF TRUTH.
+
+   Rule: every visual recipe (glass, gloss, groove, backdrop)
+   lives HERE and only here. Page CSS keeps layout/spacing only.
+   Pages opt in via utility classes + <body class="aero">.
+
+   Load order: aero.css BEFORE page styles (page may override
+   layout, never re-declare recipe values).
+
+   Tokens --glass-* come from BASE_PALETTES (theme-data.js);
+   the :root block below is only a fallback for pages that
+   haven't had a theme applied yet.
+   ============================================================ */
+
+:root {
+  --bg: #1a1a1a;
+  --surface: #222;
+  --surface-alt: #323639;
+  --surface-hover: #3d4245;
+  --text: #e9ebe9;
+  --text-secondary: #b7bcbc;
+  --text-muted: #8d938f;
+  --text-subtle: #9ba19d;
+  --accent: #5fc98a;
+  --accent-hover: #4bb97a;
+  --danger: #ff4757;
+  --success: #90ee90;
+  --white: #fff;
+  --glass-border: rgba(255, 255, 255, 0.30);
+  --glass-sheen: rgba(255, 255, 255, 0.26);
+  --glass-fill-a: rgba(255, 255, 255, 0.11);
+  --glass-fill-b: rgba(255, 255, 255, 0.035);
+  --glass-fill-c: rgba(255, 255, 255, 0.07);
+  --glass-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+/* ---- Aurora backdrop: paint on <body class="aero"> so
+   backdrop-filter has something to blur. Accent-tinted blobs
+   keep it theme-proof. ---- */
+body.aero {
+  background:
+    radial-gradient(120% 90% at 15% 8%, color-mix(in srgb, var(--accent, #5fc98a) 24%, transparent), transparent 55%),
+    radial-gradient(100% 70% at 88% 12%, color-mix(in srgb, var(--accent, #5fc98a) 10%, transparent), transparent 55%),
+    var(--bg, #242628);
+  background-attachment: fixed;
+}
+
+/* ---- Glass panes ---- */
+/* Full glass: cards, modals, window containers */
+.aero-pane,
+.aero-pane-lite,
+.aero-strip {
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.30));
+  /* Aero lighting: light comes from the top — the bottom edge is a dark
+     shade, never a white hairline (a white bottom border reads as a
+     "lamp glow" under whatever sits inside). */
+  border-bottom-color: rgba(0, 0, 0, 0.45);
+}
+.aero-pane {
+  background: linear-gradient(180deg,
+    var(--glass-fill-a, rgba(255,255,255,0.11)),
+    var(--glass-fill-b, rgba(255,255,255,0.035)) 55%,
+    var(--glass-fill-c, rgba(255,255,255,0.07)));
+  border-radius: 8px;
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen, rgba(255,255,255,0.26)),
+    inset 0 -1px 0 rgba(0,0,0,0.30),
+    var(--glass-shadow, 0 4px 14px rgba(0,0,0,0.45));
+  backdrop-filter: blur(12px) saturate(1.35);
+}
+
+/* Lite glass: dense surfaces (section boxes, tiles) — no blur */
+.aero-pane-lite {
+  background: linear-gradient(180deg,
+    var(--glass-fill-a, rgba(255,255,255,0.11)),
+    var(--glass-fill-b, rgba(255,255,255,0.035)) 55%,
+    var(--glass-fill-c, rgba(255,255,255,0.07)));
+  border-radius: 8px;
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen, rgba(255,255,255,0.26)),
+    inset 0 -1px 0 rgba(0,0,0,0.25),
+    var(--glass-shadow, 0 4px 14px rgba(0,0,0,0.45));
+}
+
+/* Slim glass bar: tab strips, headers, pills, list rows.
+   color:inherit — <button> does not inherit text color from the page
+   (UA default is black); strips must follow the active theme. */
+.aero-strip {
+  color: inherit;
+  background: linear-gradient(180deg,
+    var(--glass-fill-a, rgba(255,255,255,0.11)),
+    var(--glass-fill-c, rgba(255,255,255,0.07)));
+  border-radius: 8px;
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen, rgba(255,255,255,0.26)),
+    0 2px 8px rgba(0,0,0,0.35);
+  backdrop-filter: blur(10px) saturate(1.3);
+}
+
+/* ---- Gloss buttons ----
+   .aero-btn        = accent gloss (primary actions)
+   .aero-btn.danger = red gloss
+   .aero-btn.glass  = neutral glass chip (presets, steppers, tags)
+   Promotion to accent when a neutral chip becomes selected/active
+   is handled by the grouped selector below — one definition. */
+.aero-btn,
+.aero-btn.glass.selected,
+.aero-btn.glass.active,
+.aero-seg button.active {
+  --ac: var(--accent, #5fc98a);
+  position: relative;
+  /* NO border: any semi-transparent border on a rounded gradient element
+     makes Chrome bleed the gradient's first stop 1px below the box (the
+     "lamp line"). Definition comes from the gradient + soft shadow. */
+  border: none;
+  border-radius: 8px;
+  color: #0b1a12;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--ac) 55%, #ffffff) 0%,
+    color-mix(in srgb, var(--ac) 92%, #ffffff) 48%,
+    var(--ac) 52%,
+    color-mix(in srgb, var(--ac) 72%, #000000) 100%);
+  /* No inset sheen here: with a gradient background Chrome paints a stray
+     1px light line at the bottom edge (the ::after cap is the top shine). */
+  box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+  transition: filter 0.15s;
+}
+.aero-btn::after,
+.aero-btn.glass.selected::after,
+.aero-btn.glass.active::after,
+.aero-seg button.active::after {
+  content: '';
+  position: absolute;
+  left: 2px; right: 2px; top: 1px; height: 48%;
+  border-radius: 6px 6px 45% 45% / 6px 6px 70% 70%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0.02) 85%, transparent);
+  pointer-events: none;
+}
+.aero-btn:hover { filter: brightness(1.12); }
+.aero-btn:active { filter: brightness(0.85); }
+.aero-btn:disabled { filter: grayscale(0.6) brightness(0.8); cursor: default; }
+.aero-btn.danger { --ac: var(--danger, #ff4757); color: #ffffff; text-shadow: 0 1px 1px rgba(0,0,0,0.5); }
+.aero-btn.danger::after {
+  background: linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.02) 85%, transparent);
+}
+
+/* Neutral glass chip */
+.aero-btn.glass {
+  color: var(--text-secondary, #b7bcbc);
+  background: linear-gradient(180deg,
+    var(--glass-fill-a, rgba(255,255,255,0.11)),
+    var(--glass-fill-b, rgba(255,255,255,0.035)) 55%,
+    var(--glass-fill-c, rgba(255,255,255,0.07)));
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen, rgba(255,255,255,0.26)),
+    0 2px 5px rgba(0,0,0,0.2);
+}
+.aero-btn.glass::after { content: none; }
+.aero-btn.glass:hover { filter: brightness(1.15); }
+.aero-btn.glass:active { filter: brightness(0.9); }
+
+/* Vertical accent gloss fill (progress/bar fills) */
+.aero-vfill {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent, #5fc98a) 55%, #ffffff),
+    var(--accent, #5fc98a) 50%,
+    color-mix(in srgb, var(--accent, #5fc98a) 72%, #000000));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+}
+
+/* ---- Segmented control: container class, active child glosses ---- */
+.aero-seg { display: flex; }
+.aero-seg button {
+  flex: 1;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary, #b7bcbc);
+  font-weight: bold;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.aero-seg button:hover { color: var(--text, #e9ebe9); }
+
+/* ---- Aero input: inset groove field ---- */
+.aero-field {
+  background: color-mix(in srgb, var(--surface-alt, #323639) 70%, transparent);
+  border: 1px solid rgba(0,0,0,0.55);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.30),
+    inset 0 -1px 0 var(--glass-sheen, rgba(255,255,255,0.18)),
+    0 1px 0 var(--glass-sheen, rgba(255,255,255,0.15));
+  color: var(--text, #e9ebe9);
+}
+.aero-field:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent, #5fc98a) 70%, transparent);
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.30),
+    0 0 0 2px color-mix(in srgb, var(--accent, #5fc98a) 28%, transparent);
+}
+.aero-field::placeholder { color: var(--text-muted, #8d938f); opacity: 1; }
+
+/* ---- Element defaults under body.aero ---- */
+
+/* Sliders: groove track + glossy thumb */
+body.aero input[type="range"] {
+  width: 100%;
+  height: 14px;
+  -webkit-appearance: none;
+  background: transparent;
+}
+body.aero input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--surface-alt, #323639) 70%, transparent);
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.35);
+}
+body.aero input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent, #5fc98a) 55%, #ffffff),
+    color-mix(in srgb, var(--accent, #5fc98a) 92%, #ffffff) 48%,
+    var(--accent, #5fc98a) 52%,
+    color-mix(in srgb, var(--accent, #5fc98a) 72%, #000000));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 2px 4px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+body.aero input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--bg, #242628), 0 0 0 5px var(--accent, #5fc98a);
+}
+
+/* Selects: groove field */
+body.aero select {
+  background: color-mix(in srgb, var(--surface-alt, #323639) 70%, transparent);
+  color: var(--text, #e9ebe9);
+  border: 1px solid rgba(0, 0, 0, 0.55);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 -1px 0 var(--glass-sheen, rgba(255,255,255,0.26)),
+    0 1px 0 var(--glass-sheen, rgba(255,255,255,0.26));
+}
+body.aero select:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent, #5fc98a) 70%, transparent);
+}
+
+/* Checkboxes: gloss square (default), .aero-switch = slide switch */
+body.aero input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  margin: 0;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.55);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--surface-hover, #3d4245) 60%, #ffffff) 0%,
+    var(--surface-hover, #3d4245) 50%,
+    color-mix(in srgb, var(--surface-hover, #3d4245) 70%, #000000) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 1px 2px rgba(0, 0, 0, 0.4);
+  position: relative;
+  cursor: pointer;
+  display: inline-block;
+  vertical-align: middle;
+}
+body.aero input[type="checkbox"]::after {
+  content: '';
+  position: absolute;
+  left: 4px; top: 1px;
+  width: 4px; height: 8px;
+  border: solid #0b1a12;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  opacity: 0;
+}
+body.aero input[type="checkbox"]:checked {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent, #5fc98a) 55%, #ffffff) 0%,
+    var(--accent, #5fc98a) 50%,
+    color-mix(in srgb, var(--accent, #5fc98a) 72%, #000000) 100%);
+}
+body.aero input[type="checkbox"]:checked::after { opacity: 1; }
+
+/* Slide switch (opt-in class on the input itself) */
+body.aero input[type="checkbox"].aero-switch {
+  width: 30px;
+  height: 16px;
+  border: none;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-alt, #323639) 75%, transparent);
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.35);
+  transition: background 0.15s;
+}
+body.aero input[type="checkbox"].aero-switch::after { content: none; }
+body.aero input[type="checkbox"].aero-switch:checked::after { content: none; opacity: 0; }
+body.aero input[type="checkbox"].aero-switch::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 2px;
+  transform: translateY(-50%);
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(180deg, #ffffff, #dde1de 48%, #b9bfb9 52%, #e2e6e3);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  transition: left 0.15s;
+}
+body.aero input[type="checkbox"].aero-switch:checked {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent, #5fc98a) 60%, #ffffff) 0%,
+    var(--accent, #5fc98a) 50%,
+    color-mix(in srgb, var(--accent, #5fc98a) 72%, #000000) 100%);
+}
+body.aero input[type="checkbox"].aero-switch:checked::before { left: 16px; }
+
+/* Legacy .switch/.slider component (label wraps input + span.slider)
+   restyled in-place so existing markup keeps working */
+body.aero .switch .slider {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: none;
+  background: color-mix(in srgb, var(--surface-alt, #323639) 75%, transparent);
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.35);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+body.aero .switch .slider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(180deg, #ffffff, #dde1de 48%, #b9bfb9 52%, #e2e6e3);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  transition: transform 0.15s;
+}
+body.aero .switch input:checked + .slider {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent, #5fc98a) 60%, #ffffff) 0%,
+    var(--accent, #5fc98a) 50%,
+    color-mix(in srgb, var(--accent, #5fc98a) 72%, #000000) 100%);
+}
+body.aero .switch input:checked + .slider::before { transform: translateY(-50%) translateX(16px); }
+body.aero .switch input:focus-visible + .slider { outline: 2px solid var(--accent, #5fc98a); outline-offset: 2px; }
+body.aero .switch input:disabled + .slider { opacity: 0.4; }
+body.aero .switch-sm { width: 28px; height: 16px; }
+body.aero .switch-sm .slider::before { width: 10px; height: 10px; }
+body.aero .switch-sm input:checked + .slider::before { transform: translateY(-50%) translateX(14px); }
+
+/* ---- Popup tab bar: glossy active pill (popup-only structure) ---- */
+body.aero .tab-bar {
+  padding: 4px;
+}
+#tabHome:checked ~ .tab-bar label[for="tabHome"],
+#tabTimer:checked ~ .tab-bar label[for="tabTimer"],
+#tabModulation:checked ~ .tab-bar label[for="tabModulation"],
+#tabBlock:checked ~ .tab-bar label[for="tabBlock"],
+#tabThemes:checked ~ .tab-bar label[for="tabThemes"],
+#tabSettings:checked ~ .tab-bar label[for="tabSettings"] {
+  color: #0b1a12;
+  border: none;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent, #5fc98a) 55%, #ffffff),
+    color-mix(in srgb, var(--accent, #5fc98a) 92%, #ffffff) 48%,
+    var(--accent, #5fc98a) 52%,
+    color-mix(in srgb, var(--accent, #5fc98a) 72%, #000000));
+  position: relative;
+  opacity: 1;
+}
+#tabHome:checked ~ .tab-bar label[for="tabHome"]::after,
+#tabTimer:checked ~ .tab-bar label[for="tabTimer"]::after,
+#tabModulation:checked ~ .tab-bar label[for="tabModulation"]::after,
+#tabBlock:checked ~ .tab-bar label[for="tabBlock"]::after,
+#tabThemes:checked ~ .tab-bar label[for="tabThemes"]::after,
+#tabSettings:checked ~ .tab-bar label[for="tabSettings"]::after {
+  content: '';
+  position: absolute;
+  left: 2px; right: 2px; top: 1px; height: 48%;
+  border-radius: 6px 6px 45% 45% / 6px 6px 70% 70%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0.02) 85%, transparent);
+  pointer-events: none;
+}

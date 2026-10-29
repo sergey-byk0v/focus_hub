@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <link rel="stylesheet" href="aero.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     /* Fix 1: visible keyboard focus for all interactive controls */
@@ -39,12 +40,11 @@
       --success: #90ee90;
       --white: #fff;
       --radius-control: 8px;
-      --radius-card: 12px;
-      --shadow-card: 0 1px 2px rgba(12, 20, 16, 0.28), 0 3px 10px rgba(12, 20, 16, 0.22);
-      --shadow-card-hover: 0 2px 4px rgba(12, 20, 16, 0.3), 0 6px 16px rgba(12, 20, 16, 0.28);
+      --radius-card: 8px;
+      --shadow-card: var(--glass-shadow, 0 4px 14px rgba(0, 0, 0, 0.45));
+      --shadow-card-hover: 0 6px 18px rgba(0, 0, 0, 0.5);
       width: 350px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg);
       color: var(--text);
       padding: 14px;
       font-size: 14px;
@@ -68,32 +68,10 @@
       color: var(--text-secondary);
       font-weight: bold;
     }
-    input[type="range"] {
-      width: 100%;
-      height: 6px;
-      -webkit-appearance: none;
-      background: var(--surface-alt);
-      border-radius: 3px;
-    }
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: var(--accent);
-      cursor: pointer;
-    }
-    /* Fix 1: keyboard focus on sliders */
-    input[type="range"]:focus-visible::-webkit-slider-thumb {
-      box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--accent);
-    }
+    /* Slider/select visuals come from aero.css (body.aero scope) */
     select {
       width: 100%;
       padding: 6px 8px;
-      background: var(--surface-alt);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 6px;
       font-size: 13px;
       cursor: pointer;
     }
@@ -108,24 +86,11 @@
     .freq-step {
       width: 36px;
       height: 28px;
-      border: 1px solid var(--border);
-      background: var(--surface-alt);
-      color: var(--text-secondary);
-      border-radius: 6px;
-      cursor: pointer;
       font-size: 14px;
       font-weight: bold;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background-color, color 0.15s;
-    }
-    .freq-step:hover {
-      background: var(--surface-hover);
-    }
-    .freq-step:active {
-      background: var(--accent);
-      color: var(--text-on-accent);
     }
     #captureBtn {
       width: 100%;
@@ -155,44 +120,17 @@
       flex-shrink: 0;
       font-weight: bold;
     }
-    #captureBtn.start {
-      background: var(--surface-card);
-      color: var(--text);
-      border: 1px solid var(--border-light);
-      box-shadow: var(--shadow-card);
-    }
-    #captureBtn.start:hover {
-      background: var(--surface-hover);
-      border-color: var(--border);
-    }
-    /* Fix 3: danger fills darkened so white label text passes AA on every palette */
-    #captureBtn.stop {
-      background: color-mix(in srgb, var(--danger) 62%, #000);
-      color: var(--white);
-    }
-    #captureBtn.stop:hover {
-      background: color-mix(in srgb, var(--danger-hover) 62%, #000);
-    }
+    /* captureBtn states: .start = aero-strip, .stop = aero-btn danger (via JS) */
     #captureBtn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
-    .home-card.mini { min-height: 76px; }
-
     .controls { }
     .controls.enabled { }
 
     input[name="tab"] { display: none; }
     .tab-panel { display: none; }
-    #tabHome:checked ~ .tab-bar label[for="tabHome"],
-    #tabTimer:checked ~ .tab-bar label[for="tabTimer"],
-    #tabModulation:checked ~ .tab-bar label[for="tabModulation"],
-    #tabBlock:checked ~ .tab-bar label[for="tabBlock"],
-    #tabThemes:checked ~ .tab-bar label[for="tabThemes"],
-    #tabSettings:checked ~ .tab-bar label[for="tabSettings"] {
-      color: var(--text);
-      background: var(--accent-soft);
-    }
+    /* Active tab pill gloss: aero.css */
     #tabHome:checked ~ #controls #panelHome { display: block; }
     #tabTimer:checked ~ #controls #panelTimer { display: block; }
     #tabModulation:checked ~ #controls #panelModulation { display: block; }
@@ -206,7 +144,7 @@
       margin-bottom: 12px;
     }
     .tab-label {
-      padding: 5px 6px 4px;
+      padding: 5px 2px 4px;
       cursor: pointer;
       color: var(--text-secondary);
       font-size: 13px;
@@ -219,9 +157,10 @@
       gap: 2px;
       flex: 1;
       min-width: 0;
+      position: relative;
     }
-    .tab-label:hover { color: var(--text); background: var(--surface-alt); }
-    .tab-label svg { display: block; width: 17px; height: 17px; pointer-events: none; }
+    .tab-label:hover { color: var(--text); background: var(--glass-fill-a); }
+    .tab-label svg { display: block; width: 16px; height: 16px; pointer-events: none; }
     .tab-label .tab-caption {
       font-size: 10px;
       line-height: 1.1;
@@ -235,17 +174,10 @@
 
     .preset-grid-btn {
       padding: 5px 8px;
-      border: 1px solid var(--border);
-      background: var(--surface-alt);
-      color: var(--text-secondary);
-      border-radius: 6px;
-      cursor: pointer;
       font-size: 13px;
       font-weight: bold;
       white-space: nowrap;
     }
-    .preset-grid-btn:hover { background: var(--surface-hover); }
-    .preset-grid-btn:active { background: var(--accent); color: var(--text-on-accent); }
 
     #presetGrid {
       display: flex;
@@ -258,10 +190,7 @@
       margin-bottom: 6px;
       margin-top: 4px;
       padding: 12px;
-      background: var(--surface-card);
       border-radius: var(--radius-card);
-      border: 1px solid var(--border-light);
-      box-shadow: var(--shadow-card);
     }
     .section-header {
       display: flex;
@@ -283,12 +212,9 @@
       height: 0;
       position: absolute;
     }
-    .section-header input[type="checkbox"] {
-      accent-color: var(--accent);
-      width: 14px;
-      height: 14px;
-      cursor: pointer;
-    }
+    /* Checkbox squares + slide switches: aero.css (markup: aero-switch) */
+    .section-header input[type="checkbox"]::after,
+    .section-header input[type="checkbox"]:checked::after { content: none; }
     /* Fix 12: real heading elements for section titles */
     .section-title {
       font-size: 12px;
@@ -357,40 +283,15 @@
       cursor: pointer;
       margin-bottom: 12px;
       padding: 10px 12px;
-      background: var(--surface-card);
       border-radius: var(--radius-card);
-      border: 1px solid var(--border-light);
-      box-shadow: var(--shadow-card);
     }
-    .toggle-row input[type="checkbox"] {
-      accent-color: var(--accent);
-      width: 14px;
-      height: 14px;
-      cursor: pointer;
-    }
-
     .mode-toggle {
-      display: flex;
-      background: var(--surface-alt);
-      border-radius: 6px;
       padding: 2px;
       margin-bottom: 12px;
     }
     .mode-toggle button {
-      flex: 1;
       padding: 6px;
-      border: none;
-      background: transparent;
-      color: var(--text-secondary);
       font-size: 13px;
-      font-weight: bold;
-      cursor: pointer;
-      border-radius: 5px;
-      transition: background-color, color 0.15s;
-    }
-    .mode-toggle button.active {
-      background: var(--border);
-      color: var(--text);
     }
 
     .block-site-row {
@@ -401,12 +302,6 @@
       border-bottom: 1px solid var(--border-subtle);
     }
     .block-site-row:last-child { border-bottom: none; }
-    .block-site-row input[type="checkbox"] {
-      accent-color: var(--accent);
-      width: 13px;
-      height: 13px;
-      cursor: pointer;
-    }
     .block-site-row .site-name {
       flex: 1;
       min-width: 0;
@@ -442,15 +337,11 @@
     }
     .theme-btn {
       padding: 8px 6px;
-      border: 2px solid var(--border);
-      background: var(--surface-alt);
-      color: var(--text-secondary);
-      border-radius: 8px;
       cursor: pointer;
       font-size: 12px;
       font-weight: bold;
       text-align: center;
-      transition: border-color, background-color, color 0.15s;
+      transition: border-color, box-shadow, filter 0.15s;
       min-height: 52px;
       width: 100%;
       min-width: 0;
@@ -461,13 +352,10 @@
       align-items: center;
       justify-content: center;
     }
-    .theme-btn:hover {
-      background: var(--surface-hover);
-    }
     .theme-btn.active {
       border-color: var(--accent);
       color: var(--text);
-      background: var(--surface);
+      box-shadow: inset 0 1px 0 var(--glass-sheen), 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent), var(--shadow-card);
     }
     .theme-btn .swatch {
       width: 100%;
@@ -478,69 +366,33 @@
     .theme-btn.locked {
       opacity: 0.45;
       cursor: not-allowed;
-      background: var(--surface-alt);
       color: var(--text-muted);
       font-size: 20px;
-      border-color: var(--border-subtle);
-    }
-    .theme-btn.locked:hover {
-      background: var(--surface-alt);
     }
 
     .unlock-btn {
       width: 100%;
       padding: 10px;
-      border: none;
-      border-radius: 8px;
       font-size: 13px;
       font-weight: bold;
-      cursor: pointer;
-      background: var(--accent);
-      color: var(--text-on-accent);
       margin-bottom: 8px;
-      transition: background-color 0.15s;
-    }
-    .unlock-btn:hover {
-      background: var(--accent-hover);
     }
     .unlock-btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
-    .unlock-btn.all-unlocked {
-      background: var(--success);
-      cursor: default;
-    }
-    .unlock-btn.all-unlocked:hover {
-      background: var(--success);
-    }
+    .unlock-btn.all-unlocked { --ac: var(--success); }
 
     .add-site-row {
       display: flex;
       gap: 6px;
       margin-top: 10px;
     }
-    .add-site-row input {
-      flex: 1;
-      padding: 6px 8px;
-      background: var(--surface-alt);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 13px;
-    }
-    .add-site-row input:focus { border-color: var(--accent); }
-    .add-site-row input::placeholder, .timer-actions input::placeholder, #presetNameInput::placeholder, #musicUrlInput::placeholder, #suggestionsEditor::placeholder {
-      color: var(--text-muted);
-      opacity: 1;
-    }
+    .add-site-row input { flex: 1; padding: 6px 8px; font-size: 13px; }
 
     .timer-section {
       padding: 12px;
-      background: var(--surface-card);
       border-radius: var(--radius-card);
-      border: 1px solid var(--border-light);
-      box-shadow: var(--shadow-card);
     }
     #timerDisplay {
       text-align: center;
@@ -559,48 +411,20 @@
     .timer-presets button {
       flex: 1;
       padding: 6px 2px;
-      border: 1px solid var(--border);
-      background: var(--surface-alt);
-      color: var(--text-secondary);
-      border-radius: 6px;
-      cursor: pointer;
       font-size: 13px;
       font-weight: bold;
     }
-    .timer-presets button:hover { background: var(--surface-hover); }
-    .timer-presets button:active { background: var(--accent); color: var(--text-on-accent); }
     .timer-actions {
       display: flex;
       gap: 6px;
       align-items: center;
     }
-    .timer-actions input {
-      flex: 1;
-      padding: 5px 6px;
-      background: var(--surface-alt);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 13px;
-      width: 50px;
-    }
-    .timer-actions input:focus { border-color: var(--accent); }
+    .timer-actions input { flex: 1; padding: 5px 6px; font-size: 13px; width: 50px; }
     .timer-btn {
-      padding: 5px 10px;
-      border: none;
-      border-radius: 6px;
+      padding: 6px 14px;
       font-size: 13px;
       font-weight: bold;
       cursor: pointer;
-    }
-    .timer-btn.primary { background: var(--accent); color: var(--text-on-accent); }
-    /* Fix 3: white text on danger fills — darken enough to pass AA on every palette */
-    .timer-btn.danger {
-      background: color-mix(in srgb, var(--danger) 62%, #000);
-      color: var(--white);
-    }
-    .timer-btn.danger:hover {
-      background: color-mix(in srgb, var(--danger-hover) 62%, #000);
     }
 
     /* ==================== Home bento ==================== */
@@ -633,8 +457,6 @@
     .home-card {
       text-align: left;
       padding: 12px;
-      background: var(--surface-card);
-      border: 1px solid var(--border-light);
       border-radius: var(--radius-card);
       color: var(--text-secondary);
       cursor: pointer;
@@ -644,18 +466,19 @@
       gap: 4px;
       min-height: 84px;
       font: inherit;
-      box-shadow: var(--shadow-card);
-      transition: background-color 0.18s, border-color 0.18s, transform 0.18s, box-shadow 0.18s;
+      transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s, filter 0.18s;
+      position: relative;
+      overflow: hidden;
     }
     .home-card:hover {
-      background: var(--surface-hover);
-      border-color: var(--border);
-      box-shadow: var(--shadow-card-hover);
+      filter: brightness(1.12);
+      border-color: var(--accent);
+      box-shadow: inset 0 1px 0 var(--glass-sheen), inset 0 -1px 0 rgba(0, 0, 0, 0.25), var(--shadow-card-hover);
       transform: translateY(-1px);
     }
     .home-card:active {
-      transform: translateY(0) scale(0.98);
-      box-shadow: var(--shadow-card);
+      transform: translateY(0);
+      filter: brightness(0.95);
     }
     .card-label {
       font-size: 11px;
@@ -679,6 +502,7 @@
     /* Action cards: tap card body → open panel, play chip → run feature.
        Label is its own full-width layer; value + play chip share the row below. */
     .home-card.action-card { }
+    .home-card .card-label, .home-card .card-body { position: relative; }
     .card-body {
       margin-top: auto;
       width: 100%;
@@ -686,63 +510,48 @@
       align-items: center;
       gap: 10px;
     }
+    /* Play chip: aero-btn class; only size/layout + running hue here */
     .card-play {
       margin-left: auto;
       width: 40px;
       height: 40px;
-      border-radius: 50%;
-      border: none;
-      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 0;
       flex-shrink: 0;
-      background: color-mix(in srgb, var(--card-accent, var(--accent)) 18%, transparent);
-      color: var(--card-accent, var(--accent));
-      transition: background-color 0.15s, transform 0.15s;
     }
-    .card-play:hover {
-      background: color-mix(in srgb, var(--card-accent, var(--accent)) 30%, transparent);
-      transform: scale(1.08);
-    }
-    .card-play:active { transform: scale(0.92); }
     .card-play:disabled { opacity: 0.5; cursor: not-allowed; }
-    .card-play svg { width: 17px; height: 17px; pointer-events: none; }
+    .card-play svg { width: 17px; height: 17px; pointer-events: none; position: relative; z-index: 1; }
     .card-play .ic-stop { display: none; }
+    .home-card.running .card-play { --ac: var(--danger); color: #ffffff; }
     .home-card.running .card-play .ic-play { display: none; }
     .home-card.running .card-play .ic-stop { display: block; }
-    /* Per-card hue anchors: timers follow the theme accent, others are fixed hues */
-    .home-card.card-tint-timer {
-      --card-accent: var(--accent);
-      background: color-mix(in srgb, var(--accent) 9%, var(--surface-card));
-      border-color: color-mix(in srgb, var(--accent) 26%, var(--border-light));
+    /* Per-card hue washes over the glass; timer follows the theme accent */
+    .home-card.card-tint-timer { --card-accent: var(--accent); }
+    .home-card.card-tint-timer::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--accent) 5%, transparent));
+      pointer-events: none;
     }
     .home-card.card-tint-timer .card-label svg { color: var(--accent); }
-    .home-card.card-tint-timer:hover {
-      background: color-mix(in srgb, var(--accent) 14%, var(--surface-hover));
-      border-color: color-mix(in srgb, var(--accent) 36%, var(--border-light));
-    }
-    .home-card.card-tint-am {
-      --card-accent: #8fb9e6;
-      background: color-mix(in srgb, #74a6d8 8%, var(--surface-card));
-      border-color: color-mix(in srgb, #74a6d8 26%, var(--border-light));
+    .home-card.card-tint-am { --card-accent: #8fb9e6; }
+    .home-card.card-tint-am::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(116, 182, 232, 0.15), rgba(116, 182, 232, 0.05));
+      pointer-events: none;
     }
     .home-card.card-tint-am .card-label svg { color: #8fb9e6; }
-    .home-card.card-tint-am:hover {
-      background: color-mix(in srgb, #74a6d8 13%, var(--surface-hover));
-      border-color: color-mix(in srgb, #74a6d8 36%, var(--border-light));
-    }
-    .home-card.card-tint-music {
-      --card-accent: #b595e0;
-      background: color-mix(in srgb, #b595e0 8%, var(--surface-card));
-      border-color: color-mix(in srgb, #b595e0 26%, var(--border-light));
+    .home-card.card-tint-music { --card-accent: #b595e0; }
+    .home-card.card-tint-music::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(181, 149, 224, 0.15), rgba(181, 149, 224, 0.05));
+      pointer-events: none;
     }
     .home-card.card-tint-music .card-label svg { color: #c4a7e8; }
-    .home-card.card-tint-music:hover {
-      background: color-mix(in srgb, #b595e0 13%, var(--surface-hover));
-      border-color: color-mix(in srgb, #b595e0 36%, var(--border-light));
-    }
     .home-card.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 10px; min-height: 56px; }
     .home-card.wide .card-label { margin-bottom: 0; }
     .home-card.music {
@@ -879,10 +688,6 @@
       white-space: nowrap;
       font-size: 12px;
       padding: 3px 10px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--text-secondary);
       cursor: pointer;
     }
     .dc-config-btn:hover {
@@ -904,11 +709,8 @@
       width: min(92vw, 340px);
       max-height: calc(100vh - 24px);
       overflow-y: auto;
-      background: var(--surface);
-      border: 1px solid var(--border);
       border-radius: 10px;
       padding: 16px;
-      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
       overscroll-behavior: contain;
     }
     #deepCleanCard.off #deepCleanSiteList {
@@ -975,36 +777,11 @@
       flex-shrink: 0;
     }
     .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
-    .switch .slider {
-      position: absolute;
-      inset: 0;
-      border-radius: 999px;
-      background: var(--surface-alt);
-      border: 1px solid var(--border);
-      transition: background-color 0.15s, border-color 0.15s;
-    }
-    .switch .slider::before {
-      content: '';
-      position: absolute;
-      width: 14px;
-      height: 14px;
-      left: 2px;
-      top: 2px;
-      border-radius: 50%;
-      background: var(--text-muted);
-      transition: transform 0.15s, background-color 0.15s;
-    }
-    .switch input:checked + .slider { background: var(--accent); border-color: var(--accent); }
-    .switch input:checked + .slider::before { transform: translateX(14px); background: #fff; }
-    .switch input:focus-visible + .slider { outline: 2px solid var(--accent); outline-offset: 2px; }
-    .switch input:disabled + .slider { opacity: 0.4; }
-    .switch-sm { width: 28px; height: 16px; }
-    .switch-sm .slider::before { width: 10px; height: 10px; left: 2px; top: 2px; }
-    .switch-sm input:checked + .slider::before { transform: translateX(12px); }
+    /* .switch/.slider toggles: aero.css */
 
   </style>
 </head>
-<body>
+<body class="aero">
   <input type="radio" name="tab" id="tabHome" checked>
   <input type="radio" name="tab" id="tabTimer">
   <input type="radio" name="tab" id="tabModulation">
@@ -1012,7 +789,7 @@
   <input type="radio" name="tab" id="tabThemes">
   <input type="radio" name="tab" id="tabSettings">
 
-  <div class="tab-bar">
+  <div class="tab-bar aero-strip">
     <label for="tabHome" class="tab-label" id="labelHome" aria-label="Home tab">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
       <span class="tab-caption">Home</span>
@@ -1046,82 +823,82 @@
         <span id="homeGreeting">Focus board</span>
       </div>
       <div class="home-grid">
-        <div class="home-card card-tint-timer action-card" id="cardTimer" data-goto="Timer" role="button" tabindex="0" title="Open timer">
+        <div class="home-card aero-pane card-tint-timer action-card" id="cardTimer" data-goto="Timer" role="button" tabindex="0" title="Open timer">
           <span class="card-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="14" r="8"/><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/></svg>Focus timer</span>
           <div class="card-body">
             <span class="home-value" id="homeCountdown">00:00</span>
-            <button class="card-play" id="homeTimerPlay" title="Start timer">
+            <button class="card-play aero-btn" id="homeTimerPlay" title="Start timer">
               <svg class="ic-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3" fill="currentColor" stroke="none"/></svg>
               <svg class="ic-stop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/></svg>
             </button>
           </div>
         </div>
-        <div class="home-card card-tint-am action-card" id="cardModulation" data-goto="Modulation" role="button" tabindex="0" title="Open AM modulation">
+        <div class="home-card aero-pane card-tint-am action-card" id="cardModulation" data-goto="Modulation" role="button" tabindex="0" title="Open AM modulation">
           <span class="card-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>AM modulation</span>
           <div class="card-body">
             <span class="home-value" id="homeAmState">Off</span>
-            <button class="card-play" id="homeAmPlay" title="Start AM modulation">
+            <button class="card-play aero-btn" id="homeAmPlay" title="Start AM modulation">
               <svg class="ic-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3" fill="currentColor" stroke="none"/></svg>
               <svg class="ic-stop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/></svg>
             </button>
           </div>
         </div>
-        <button class="home-card mini" id="readingListBtn" title="Open Reading List">
-          <span class="card-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Reading list</span>
-          <span class="home-value">Open</span>
-        </button>
-        <button class="home-card mini" id="plannerBtn" title="Open Daily Planner">
-          <span class="card-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg>Planner</span>
-          <span class="home-value">Open</span>
-        </button>
-        <button class="home-card wide music card-tint-music" id="playMusicBtn" title="Focus Music">
+        <button class="home-card aero-pane wide music card-tint-music" id="playMusicBtn" title="Focus Music">
           <span class="music-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
           <span class="card-label">Focus music</span>
+        </button>
+        <button class="home-card aero-pane wide music card-tint-music" id="readingListBtn" title="Open Reading List">
+          <span class="music-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
+          <span class="card-label">Reading list</span>
+        </button>
+        <button class="home-card aero-pane wide music card-tint-music" id="plannerBtn" title="Open Daily Planner">
+          <span class="music-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg></span>
+          <span class="card-label">Planner</span>
         </button>
       </div>
     </div>
 
     <div class="tab-panel" id="panelTimer">
-      <div class="timer-section">
+      <div class="timer-section aero-pane">
         <div id="timerDisplay">00:00</div>
         <div id="countdownControls">
           <div class="timer-presets">
-            <button class="preset-btn" data-seconds="600">10m</button>
-            <button class="preset-btn" data-seconds="1800">30m</button>
-            <button class="preset-btn" data-seconds="3600">60m</button>
-            <button class="preset-btn" data-seconds="5400">90m</button>
+            <button class="preset-btn aero-btn glass" data-seconds="600">10m</button>
+            <button class="preset-btn aero-btn glass" data-seconds="1800">30m</button>
+            <button class="preset-btn aero-btn glass" data-seconds="3600">60m</button>
+            <button class="preset-btn aero-btn glass" data-seconds="5400">90m</button>
           </div>
           <div class="timer-actions">
-            <input type="number" id="customMinutes" name="customMinutes" min="1" max="90" value="10" placeholder="10" aria-label="Minutes" autocomplete="off">
+            <input type="number" id="customMinutes" class="aero-field" name="customMinutes" min="1" max="90" value="10" placeholder="10" aria-label="Minutes" autocomplete="off">
             <span class="input-suffix" aria-hidden="true">min</span>
-            <button id="startBtn" class="timer-btn primary">Start</button>
-            <button id="stopBtn" class="timer-btn danger" style="display:none">Stop</button>
+            <button id="startBtn" class="timer-btn aero-btn primary">Start</button>
+            <button id="stopBtn" class="timer-btn aero-btn danger" style="display:none">Stop</button>
           </div>
         </div>
       </div>
     </div>
 
     <div class="tab-panel" id="panelModulation">
-      <button id="captureBtn" class="start" title="Capture tab audio for modulation">
+      <button id="captureBtn" class="start aero-strip" title="Capture tab audio for modulation">
         <span class="status-dot" aria-hidden="true"></span>
         <span class="capture-action">Tab audio</span>
         <span id="captureTarget">No tab captured</span>
       </button>
-      <div class="section-box">
+      <div class="section-box aero-pane-lite">
         <h2 class="section-title">Presets</h2>
         <div id="presetGrid"></div>
         <div class="row-actions">
-          <input type="text" id="presetNameInput" name="presetName" placeholder="Preset name…" aria-label="Preset name" autocomplete="off" style="flex:1; padding:5px 6px; background:var(--surface-alt); color:var(--text); border:1px solid var(--border); border-radius:6px; font-size:12px;">
-          <button id="savePresetBtn" class="timer-btn primary">Save</button>
+          <input type="text" id="presetNameInput" name="presetName" placeholder="Preset name…" aria-label="Preset name" autocomplete="off" class="aero-field" style="flex:1; padding:5px 8px; font-size:12px;">
+          <button id="savePresetBtn" class="timer-btn aero-btn primary">Save</button>
         </div>
       </div>
 
       <div class="control-group">
         <label>Modulator Frequency <span id="freqValue" class="value">16.0 Hz</span></label>
         <div class="freq-row">
-          <button class="freq-step" id="freqDown">-1</button>
+          <button class="freq-step aero-btn glass" id="freqDown">-1</button>
           <input type="range" id="frequency" min="1" max="50" step="1" value="16">
-          <button class="freq-step" id="freqUp">+1</button>
+          <button class="freq-step aero-btn glass" id="freqUp">+1</button>
         </div>
       </div>
 
@@ -1131,10 +908,10 @@
       </div>
 
 
-      <div class="section-box">
+      <div class="section-box aero-pane-lite">
         <div class="section-header">
           <label>
-            <input type="checkbox" id="spatialEnabled">
+            <input type="checkbox" id="spatialEnabled" class="aero-switch">
             Spatial Movement
           </label>
         </div>
@@ -1150,15 +927,15 @@
         </div>
       </div>
 
-      <div class="section-box">
+      <div class="section-box aero-pane-lite">
         <div class="section-header">
           <label>
-            <input type="checkbox" id="crossoverEnabled">
+            <input type="checkbox" id="crossoverEnabled" class="aero-switch">
             Filter
           </label>
         </div>
         <div id="crossoverControls" class="section-sub-controls">
-          <div class="mode-toggle" style="margin-bottom:8px;">
+          <div class="mode-toggle aero-seg" style="margin-bottom:8px;">
             <button id="crossoverModeLow" class="active">Low</button>
             <button id="crossoverModeHigh">High</button>
           </div>
@@ -1169,10 +946,10 @@
         </div>
       </div>
 
-      <div class="section-box">
+      <div class="section-box aero-pane-lite">
         <div class="section-header">
           <label>
-            <input type="checkbox" id="pinkNoiseEnabled">
+            <input type="checkbox" id="pinkNoiseEnabled" class="aero-switch">
             Noise
           </label>
           <label style="margin-left:auto; font-size:12px; color:var(--text-subtle); cursor:pointer; display:flex; align-items:center; gap:4px;">
@@ -1199,7 +976,7 @@
     </div>
 
     <div class="tab-panel" id="panelBlock">
-      <div class="section-box">
+      <div class="section-box aero-pane-lite">
         <div class="section-header">
           <h2 class="section-title">Site Blocking</h2>
           <label class="switch" style="margin-left:auto;" title="Toggle site blocking">
@@ -1209,19 +986,19 @@
         </div>
         <div id="siteBlockingControls" class="site-blocking-controls enabled">
           <div class="blocking-caption" style="margin-top:0;">List mode:</div>
-          <div class="mode-toggle" style="margin-bottom:8px;">
+          <div class="mode-toggle aero-seg" style="margin-bottom:8px;">
             <button id="modeBlocklist" class="active">Blocklist</button>
             <button id="modeWhitelist">Whitelist</button>
           </div>
           <div id="blockedSiteList"></div>
           <div class="add-site-row">
-            <input type="text" id="newSiteInput" name="newSite" placeholder="example.com" aria-label="Add site domain" autocomplete="off">
-            <button id="addSiteBtn" class="timer-btn primary" style="font-size:12px; white-space:nowrap;">+ Add</button>
+            <input type="text" id="newSiteInput" class="aero-field" name="newSite" placeholder="example.com" aria-label="Add site domain" autocomplete="off">
+            <button id="addSiteBtn" class="timer-btn aero-btn primary" style="font-size:12px; white-space:nowrap;">+ Add</button>
           </div>
 
           <div class="blocking-divider">
             <div class="blocking-caption" style="margin-top:0;">When a blocked site is opened:</div>
-            <div class="mode-toggle">
+            <div class="mode-toggle aero-seg">
               <button id="modeReason" class="active">Reason page</button>
               <button id="modeBlockBtn">Hard block</button>
             </div>
@@ -1232,7 +1009,7 @@
               </label>
             <div class="toggle-row" style="margin-bottom:8px; display:flex; flex-direction:column; gap:6px;">
               <div style="font-size:12px; color:var(--text-secondary);">After choosing reason:</div>
-              <div class="mode-toggle" style="margin-bottom:0;">
+              <div class="mode-toggle aero-seg" style="margin-bottom:0;">
                 <button id="modeReasonNone" type="button">None</button>
                 <button id="modeReasonSuggestions" type="button" class="active">Suggestions</button>
                 <button id="modeReasonArticles" type="button">Articles</button>
@@ -1243,15 +1020,15 @@
               <label for="suggestionsEditor" style="cursor:pointer; display:flex; align-items:center;">Text to show after choosing a reason</label>
             </div>
             <div id="suggestionsEditorBox" style="margin-top:8px;">
-              <textarea id="suggestionsEditor" name="suggestions" placeholder="Markdown for each reason…" autocomplete="off" style="width:100%; height:160px; padding:8px; background:var(--surface-alt); color:var(--text); border:1px solid var(--border); border-radius:6px; font-size:12px; font-family:monospace; resize:vertical;"></textarea>
+              <textarea id="suggestionsEditor" name="suggestions" placeholder="Markdown for each reason…" autocomplete="off" class="aero-field" style="width:100%; height:160px; padding:8px; font-size:12px; font-family:monospace; resize:vertical;"></textarea>
               <div style="display:flex; gap:6px; margin-top:6px;">
-                <button id="suggestionsSaveBtn" class="timer-btn primary" style="font-size:12px; padding:4px 12px;">Save</button>
-                <button id="suggestionsRestoreBtn" class="timer-btn" style="font-size:12px; padding:4px 12px; background:transparent; border:1px solid var(--border); color:var(--text-secondary);">Restore Defaults</button>
+                <button id="suggestionsSaveBtn" class="timer-btn aero-btn primary" style="font-size:12px; padding:4px 12px;">Save</button>
+                <button id="suggestionsRestoreBtn" class="timer-btn aero-btn glass" style="font-size:12px; padding:4px 12px;">Restore Defaults</button>
               </div>
             </div>
             <div id="articlesLinkBox" style="display:none; margin-top:8px;">
               <div style="font-size:12px; color:var(--text-secondary); margin-bottom:6px;">Articles are managed in the reading list.</div>
-              <button id="openReadingListBtn" class="timer-btn primary" style="font-size:12px; padding:4px 12px;">Open reading list</button>
+              <button id="openReadingListBtn" class="timer-btn aero-btn primary" style="font-size:12px; padding:4px 12px;">Open reading list</button>
             </div>
             </div>
           </div>
@@ -1273,24 +1050,24 @@
       </div>
     </div>
     <div class="tab-panel" id="panelThemes">
-      <div class="section-box">
-        <button id="unlockBtn" class="unlock-btn">Roll!</button>
+      <div class="section-box aero-pane-lite">
+        <button id="unlockBtn" class="unlock-btn aero-btn">Roll!</button>
         <div id="themeGrid" class="theme-grid"></div>
       </div>
     </div>
     <div class="tab-panel" id="panelSettings">
-      <div class="section-box">
+      <div class="section-box aero-pane-lite">
         <div class="section-header"><h2 class="section-title">Focus Music</h2></div>
         <div style="display:flex; gap:6px; align-items:center;">
-          <input type="text" id="musicUrlInput" name="musicUrl" placeholder="https://youtube.com/watch?v=…" aria-label="Focus music URL" autocomplete="off" style="flex:1; padding:5px 6px; background:var(--surface-alt); color:var(--text); border:1px solid var(--border); border-radius:6px; font-size:12px;">
-          <button id="musicUrlSaveBtn" class="timer-btn primary" style="font-size:12px; white-space:nowrap;">Save</button>
+          <input type="text" id="musicUrlInput" name="musicUrl" placeholder="https://youtube.com/watch?v=…" aria-label="Focus music URL" autocomplete="off" class="aero-field" style="flex:1; padding:5px 8px; font-size:12px;">
+          <button id="musicUrlSaveBtn" class="timer-btn aero-btn primary" style="font-size:12px; white-space:nowrap;">Save</button>
         </div>
         <div style="margin-top:6px; font-size:12px; color:var(--text-subtle);">Opens via the Focus Music button. Bypasses the blocker. Default: lofi hip hop radio.</div>
         <label class="toggle-row" id="launchMusicRow">
           <input type="checkbox" id="launchMusicOnStart"> Open On Browser Startup
         </label>
       </div>
-      <div class="section-box">
+      <div class="section-box aero-pane-lite">
         <div class="section-header"><h2 class="section-title">Visible Tabs</h2></div>
         <div id="tabToggleList">
           <label class="toggle-row" style="margin-bottom:6px;">
@@ -1318,7 +1095,7 @@
     </div>
 
     <div class="modal-overlay" id="deepCleanModal" hidden>
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dcTitle">
+      <div class="modal aero-pane" role="dialog" aria-modal="true" aria-labelledby="dcTitle">
         <div class="modal-header">
           <h2 class="modal-title" id="dcTitle">Deep Clean</h2>
           <button type="button" class="modal-close" id="dcCloseBtn" aria-label="Close" title="Close">&times;</button>

@@ -3,54 +3,55 @@
 <head>
   <meta charset="utf-8">
   <title>Blocked</title>
+  <link rel="stylesheet" href="aero.css">
   <link rel="stylesheet" href="block.css">
 </head>
-<body>
-  <div class="container">
+<body class="aero">
+  <div class="container aero-pane">
     <div id="reason-ui">
       <p class="question">Why do you need to open <strong id="site-name"></strong>?</p>
 
       <div class="tag-grid" id="tagGrid">
-        <button class="tag-btn" data-tag="Waiting">Waiting</button>
-        <button class="tag-btn" data-tag="Bored">Bored</button>
-        <button class="tag-btn" data-tag="Procrastination">Procrastination</button>
-        <button class="tag-btn" data-tag="Avoiding something">Avoiding something</button>
-        <button class="tag-btn" data-tag="Free-time chill">Free-time chill</button>
-        <button class="tag-btn" data-tag="Work/Study">Work/Study</button>
-        <button class="tag-btn" data-tag="On background">On background</button>
-        <button class="tag-btn" data-tag="Other">Other</button>
+        <button class="tag-btn aero-btn glass" data-tag="Waiting">Waiting</button>
+        <button class="tag-btn aero-btn glass" data-tag="Bored">Bored</button>
+        <button class="tag-btn aero-btn glass" data-tag="Procrastination">Procrastination</button>
+        <button class="tag-btn aero-btn glass" data-tag="Avoiding something">Avoiding something</button>
+        <button class="tag-btn aero-btn glass" data-tag="Free-time chill">Free-time chill</button>
+        <button class="tag-btn aero-btn glass" data-tag="Work/Study">Work/Study</button>
+        <button class="tag-btn aero-btn glass" data-tag="On background">On background</button>
+        <button class="tag-btn aero-btn glass" data-tag="Other">Other</button>
       </div>
 
       <div id="otherInputWrapper" style="display:none">
-        <textarea id="reason-input" placeholder="What are you doing?" rows="2"></textarea>
+        <textarea id="reason-input" class="aero-field" placeholder="What are you doing?" rows="2"></textarea>
       </div>
 
-      <button id="proceed-btn" disabled>Loading...</button>
+      <button id="proceed-btn" class="aero-btn" disabled>Loading...</button>
     </div>
     <div id="blocked-ui" style="display:none">
       <p class="blocked-title">Site Blocked</p>
       <p class="subtitle"><strong id="blocked-site-name"></strong> is blocked</p>
-      <button id="close-btn">Close Tab</button>
+      <button id="close-btn" class="aero-btn danger">Close Tab</button>
     </div>
     <div id="suggestions-ui" style="display:none">
       <p class="suggestions-title">Alternatives for "<span id="suggested-tag"></span>"</p>
       <p class="suggestions-subtitle">Maybe try one of these instead:</p>
       <div id="suggestions-list"></div>
-      <button id="continue-btn" class="proceed-btn">Continue to site</button>
+      <button id="continue-btn" class="proceed-btn aero-btn">Continue to site</button>
     </div>
     <div id="article-ui" style="display:none">
-      <button id="open-article-btn" class="proceed-btn">Open reading list</button>
-      <button id="article-continue-btn" class="proceed-btn">Continue to site</button>
+      <button id="open-article-btn" class="proceed-btn aero-btn">Open reading list</button>
+      <button id="article-continue-btn" class="proceed-btn aero-btn">Continue to site</button>
     </div>
     <div id="statsSection" class="stats-section">
-      <button id="statsToggle" class="stats-toggle">Show Statistics ▸</button>
+      <button id="statsToggle" class="stats-toggle aero-btn glass">Show Statistics ▸</button>
       <div id="statsContent" class="stats-content" style="display:none">
         <div class="stats-header">
           <span id="statsTotal"></span>
-          <button id="clearStatsBtn" class="clear-btn">Clear All</button>
+          <button id="clearStatsBtn" class="clear-btn aero-btn glass">Clear All</button>
         </div>
         <div id="statsChart" class="stats-chart"></div>
-        <button id="export-btn" class="clear-btn">Export CSV</button>
+        <button id="export-btn" class="clear-btn aero-btn glass">Export CSV</button>
       </div>
     </div>
   </div>

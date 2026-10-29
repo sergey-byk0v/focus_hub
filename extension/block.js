@@ -524,7 +524,7 @@
         track.className = 'stats-bar-track';
 
         var fill = document.createElement('div');
-        fill.className = 'stats-bar-fill';
+        fill.className = 'stats-bar-fill aero-vfill';
         fill.style.width = pct + '%';
         track.appendChild(fill);
         row.appendChild(track);
