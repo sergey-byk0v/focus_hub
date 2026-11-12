@@ -1,6 +1,6 @@
 # Focus Hub — Agent Documentation
 
-**Current release: v_0_4_0 (manifest 1.5.0)**
+**Current release: v_0_5_0 (manifest 1.6.0)**
 
 ## Agent Instructions
 
@@ -80,3 +80,5 @@ The release process is codified in the project skill `skills/release-focus-hub/`
 13. **Timer and capture are independent lifecycles** — `STOP_CAPTURE` stops only modulation and must NOT clear `timer-expiry`/`countdownEndTime`; captured-tab close keeps the countdown; timer expiry still ends the whole session. Offscreen doc closes only when no timer is pending (it hosts the alert sound).
 14. **New theme tokens must exist in every `BASE_PALETTES` entry** — `--surface-card`, `--accent-soft`, `--shadow-card(-hover)` are set per-palette in `theme-data.js`; if a palette lacks them, cards keep the dark default under bright themes.
 15. **No semi-transparent borders on rounded gradient elements** — Chrome (Skia) bleeds the gradient's FIRST stop as a 1px light line just below the box's bottom edge when the border (or border-color) has alpha (`transparent`, `rgba(...)`, `color-mix(... , transparent)`). Gloss buttons/tab pills/knobs therefore use `border: none`; glass panes/strips are safe only because their bottom border is opaque dark (`border-bottom-color: rgba(0,0,0,0.45)` in aero.css). Keep it that way.
+16. **Timer has three storage keys** — `countdownEndTime` (running, epoch ms), `countdownPausedRemaining` (paused, seconds), `countdownTotalMs` (ring fraction denominator). State machine: idle = neither end/paused key; all three must be cleared on stop AND on expiry (`handleTimerExpiry`). `QUERY_COUNTDOWN` returns `{state, endTime|pausedRemaining, totalMs}` — never the old `{active}` shape.
+17. **Check-in alarms are self-healing via `scheduleNextCheckin()`** — call it from `onStartup`, `onInstalled`, `CHECKIN_SAVE`, and lazily from `CHECKIN_STATUS` (day rollover regenerates, past times dropped, missing alarm recreated). Never schedule `checkin-due` from the popup or block-page contexts; `focusCheckins.times` only ever holds future timestamps for `cfg.day`.

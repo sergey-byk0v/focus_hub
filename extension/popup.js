@@ -3,6 +3,9 @@ let currentTabId = null;
 let currentTabTitle = '';
 let displayInterval = null;
 let displayEndTime = null;
+let timerState = 'idle'; // 'idle' | 'running' | 'paused'
+let displayPausedRemaining = null; // ms, when paused
+let ringTotalMs = null; // total session length for the progress ring
 let userPresets = [];
 let blocklistSites = [];
 let whitelistSites = [];
@@ -100,10 +103,21 @@ const els = {
   addSiteBtn: document.getElementById('addSiteBtn'),
   timerDisplay: document.getElementById('timerDisplay'),
   countdownControls: document.getElementById('countdownControls'),
+  ringProgress: document.getElementById('ringProgress'),
   presetBtns: document.querySelectorAll('.preset-btn'),
   customMinutes: document.getElementById('customMinutes'),
   startBtn: document.getElementById('startBtn'),
+  pauseBtn: document.getElementById('pauseBtn'),
+  resumeBtn: document.getElementById('resumeBtn'),
   stopBtn: document.getElementById('stopBtn'),
+  checkinEnabled: document.getElementById('checkinEnabled'),
+  ciFromH: document.getElementById('ciFromH'),
+  ciFromM: document.getElementById('ciFromM'),
+  ciToH: document.getElementById('ciToH'),
+  ciToM: document.getElementById('ciToM'),
+  ciCount: document.getElementById('ciCount'),
+  checkinSaveBtn: document.getElementById('checkinSaveBtn'),
+  checkinStatus: document.getElementById('checkinStatus'),
   modeReason: document.getElementById('modeReason'),
   modeBlockBtn: document.getElementById('modeBlockBtn'),
   modeBlocklist: document.getElementById('modeBlocklist'),
@@ -345,33 +359,71 @@ function formatTime(ms) {
   return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
 }
 
+// ---- Progress ring ----
+
+const RING_CIRCUMFERENCE = 2 * Math.PI * 54;
+if (els.ringProgress) {
+  els.ringProgress.style.strokeDasharray = RING_CIRCUMFERENCE.toFixed(2);
+}
+
+function renderRing(remainingMs) {
+  if (!els.ringProgress) return;
+  const total = ringTotalMs && ringTotalMs > 0 ? ringTotalMs : 0;
+  const fraction = total ? Math.max(0, Math.min(1, remainingMs / total)) : 0;
+  els.ringProgress.style.strokeDashoffset = (RING_CIRCUMFERENCE * (1 - fraction)).toFixed(2);
+}
+
+function currentTimerMs() {
+  if (timerState === 'running' && displayEndTime) return Math.max(0, displayEndTime - Date.now());
+  if (timerState === 'paused' && displayPausedRemaining != null) return displayPausedRemaining;
+  return 0;
+}
+
+function updateTimerButtons() {
+  els.startBtn.style.display = timerState === 'idle' ? 'inline-block' : 'none';
+  els.startBtn.textContent = timerState === 'idle' ? 'Start' : 'Add';
+  els.pauseBtn.style.display = timerState === 'running' ? 'inline-block' : 'none';
+  els.resumeBtn.style.display = timerState === 'paused' ? 'inline-block' : 'none';
+  els.stopBtn.style.display = timerState === 'idle' ? 'none' : 'inline-block';
+}
+
 function displayTick() {
   if (!displayEndTime) return;
   const remaining = displayEndTime - Date.now();
   if (remaining <= 0) {
-    els.timerDisplay.textContent = '00:00';
-    stopDisplayTick();
+    resetTimerDisplay();
     return;
   }
   els.timerDisplay.textContent = formatTime(remaining);
+  renderRing(remaining);
   renderHomeTimer();
 }
 
-function startDisplayTick(endTime) {
+function startDisplayTick(endTime, totalMs) {
   stopDisplayTick();
+  timerState = 'running';
   displayEndTime = endTime;
+  displayPausedRemaining = null;
+  if (totalMs) ringTotalMs = totalMs;
   displayInterval = setInterval(displayTick, 100);
   displayTick();
-  els.startBtn.style.display = 'none';
-  els.stopBtn.style.display = 'inline-block';
+  updateTimerButtons();
+}
+
+function setPausedDisplay(remainingMs, totalMs) {
+  stopDisplayTick();
+  timerState = 'paused';
+  displayPausedRemaining = remainingMs;
+  if (totalMs) ringTotalMs = Math.max(totalMs, remainingMs);
+  els.timerDisplay.textContent = formatTime(remainingMs);
+  renderRing(remainingMs);
+  updateTimerButtons();
+  renderHomeTimer();
 }
 
 function stopDisplayTick() {
   if (displayInterval) { clearInterval(displayInterval); displayInterval = null; }
   displayEndTime = null;
-  els.startBtn.style.display = 'inline-block';
-  els.stopBtn.style.display = 'none';
-  renderHomeTimer();
 }
 
 // ==================== Home bento ====================
@@ -389,16 +441,20 @@ const homeEls = {
 
 function renderHomeTimer() {
   if (!homeEls.countdown) return;
-  homeEls.card.classList.toggle('running', !!displayEndTime);
-  if (displayEndTime) {
-    homeEls.countdown.textContent = formatTime(displayEndTime - Date.now());
+  const active = timerState !== 'idle';
+  homeEls.card.classList.toggle('running', timerState === 'running');
+  homeEls.card.classList.toggle('paused', timerState === 'paused');
+  if (active) {
+    homeEls.countdown.textContent = formatTime(currentTimerMs());
     homeEls.countdown.classList.add('active');
   } else {
     homeEls.countdown.textContent = '00:00';
     homeEls.countdown.classList.remove('active');
   }
-  homeEls.title.classList.toggle('live', !!displayEndTime);
-  homeEls.greeting.textContent = displayEndTime ? 'Session in progress' : 'Focus board';
+  homeEls.title.classList.toggle('live', active);
+  homeEls.greeting.textContent =
+    timerState === 'running' ? 'Session in progress' :
+    timerState === 'paused' ? 'Session paused' : 'Focus board';
 }
 
 function renderHomeAM() {
@@ -437,9 +493,19 @@ document.querySelectorAll('.home-card[data-goto]').forEach(card => {
   });
 });
 
-function resetTimer() {
+function resetTimerDisplay() {
   stopDisplayTick();
+  timerState = 'idle';
+  displayPausedRemaining = null;
+  ringTotalMs = null;
   els.timerDisplay.textContent = '00:00';
+  renderRing(0);
+  updateTimerButtons();
+  renderHomeTimer();
+}
+
+function resetTimer() {
+  resetTimerDisplay();
 }
 
 function applyBlocking() {
@@ -631,20 +697,48 @@ function startCountdownFromInput() {
   const seconds = minutes * 60;
   if (seconds > 0 && seconds <= 5400) {
     chrome.runtime.sendMessage({ type: 'START_COUNTDOWN', seconds }, r => {
-      if (r && r.endTime) startDisplayTick(r.endTime);
+      if (r && r.endTime) {
+        els.presetBtns.forEach(b => b.classList.remove('active'));
+        startDisplayTick(r.endTime, seconds * 1000);
+      }
     });
   }
 }
 
+// Running/paused: presets and the Start→Add button add minutes to remaining
+function addCountdownSeconds(seconds) {
+  chrome.runtime.sendMessage({ type: 'ADD_COUNTDOWN', seconds }, r => {
+    if (!r || !r.success) return;
+    if (r.state === 'running' && r.endTime) {
+      startDisplayTick(r.endTime, r.totalMs);
+    } else if (r.state === 'paused') {
+      setPausedDisplay(r.pausedRemaining * 1000, r.totalMs);
+    }
+  });
+}
+
+function pauseCountdown() {
+  chrome.runtime.sendMessage({ type: 'PAUSE_COUNTDOWN' }, r => {
+    if (r && r.success) setPausedDisplay(r.pausedRemaining * 1000, ringTotalMs);
+  });
+}
+
+function resumeCountdown() {
+  chrome.runtime.sendMessage({ type: 'RESUME_COUNTDOWN' }, r => {
+    if (r && r.endTime) startDisplayTick(r.endTime, ringTotalMs);
+  });
+}
+
 function stopCountdown() {
   chrome.runtime.sendMessage({ type: 'STOP_COUNTDOWN' });
-  stopDisplayTick();
-  els.timerDisplay.textContent = '00:00';
+  resetTimerDisplay();
 }
 
 homeEls.timerPlay.addEventListener('click', (e) => {
   e.stopPropagation();
-  if (displayEndTime) stopCountdown(); else startCountdownFromInput();
+  if (timerState === 'running') pauseCountdown();
+  else if (timerState === 'paused') resumeCountdown();
+  else startCountdownFromInput();
 });
 els.plannerBtn.addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('planner.html') });
@@ -756,16 +850,101 @@ els.modeBlockBtn.addEventListener('click', () => {
 els.presetBtns.forEach(btn => {
   btn.addEventListener('click', () => {
     const seconds = parseInt(btn.dataset.seconds);
-    chrome.runtime.sendMessage({ type: 'START_COUNTDOWN', seconds }, r => {
-      if (r && r.endTime) startDisplayTick(r.endTime);
-    });
+    if (timerState === 'idle') {
+      // Idle: preset selects the duration and gets the accent highlight
+      els.presetBtns.forEach(b => b.classList.toggle('active', b === btn));
+      els.customMinutes.value = seconds / 60;
+    } else {
+      addCountdownSeconds(seconds);
+    }
   });
 });
 
 // Timer runs independently of modulation capture — no implicit capture here
-els.startBtn.addEventListener('click', startCountdownFromInput);
+els.startBtn.addEventListener('click', () => {
+  if (timerState === 'idle') startCountdownFromInput();
+  else addCountdownSeconds(parseInt(els.customMinutes.value) * 60);
+});
+
+els.pauseBtn.addEventListener('click', pauseCountdown);
+els.resumeBtn.addEventListener('click', resumeCountdown);
 
 els.stopBtn.addEventListener('click', stopCountdown);
+
+// ==================== Focus check-ins ====================
+
+const CHECKIN_KEY = 'focusCheckins';
+
+function renderCheckinStatus(status) {
+  if (!status || !status.enabled) {
+    els.checkinStatus.textContent = 'Off';
+    return;
+  }
+  if (status.nextTime) {
+    const d = new Date(status.nextTime);
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    els.checkinStatus.textContent = 'Next ' + hh + ':' + mm + ' · ' + status.remaining + ' left today';
+  } else {
+    els.checkinStatus.textContent = 'Done for today';
+  }
+}
+
+function populateCheckinInputs(cfg) {
+  els.checkinEnabled.checked = !!(cfg && cfg.enabled);
+  els.ciFromH.value = String(cfg ? cfg.fromH : 9).padStart(2, '0');
+  els.ciFromM.value = String(cfg ? cfg.fromM : 0).padStart(2, '0');
+  els.ciToH.value = String(cfg ? cfg.toH : 17).padStart(2, '0');
+  els.ciToM.value = String(cfg ? cfg.toM : 0).padStart(2, '0');
+  els.ciCount.value = String(cfg ? cfg.count : 5);
+}
+
+function refreshCheckinUI() {
+  chrome.storage.local.get(CHECKIN_KEY).then(result => {
+    populateCheckinInputs(result[CHECKIN_KEY]);
+  });
+  chrome.runtime.sendMessage({ type: 'CHECKIN_STATUS' }, r => {
+    if (!chrome.runtime.lastError) renderCheckinStatus(r);
+  });
+}
+
+function saveCheckin() {
+  const cfg = {
+    enabled: els.checkinEnabled.checked,
+    fromH: parseInt(els.ciFromH.value, 10) || 0,
+    fromM: parseInt(els.ciFromM.value, 10) || 0,
+    toH: parseInt(els.ciToH.value, 10) || 0,
+    toM: parseInt(els.ciToM.value, 10) || 0,
+    count: parseInt(els.ciCount.value, 10) || 1
+  };
+  els.checkinSaveBtn.disabled = true;
+  chrome.runtime.sendMessage({ type: 'CHECKIN_SAVE', ...cfg }, r => {
+    els.checkinSaveBtn.disabled = false;
+    if (chrome.runtime.lastError) return;
+    if (r && r.error) {
+      els.checkinStatus.textContent = r.error;
+    } else {
+      renderCheckinStatus(r);
+    }
+  });
+}
+
+// Stepper buttons (planner pattern: text inputs, bounds live in min/max attrs)
+document.querySelector('.checkin-section').addEventListener('click', e => {
+  const btn = e.target.closest('.stepper-btn');
+  if (!btn) return;
+  const input = btn.closest('.stepper').querySelector('input');
+  const dir = parseInt(btn.dataset.dir, 10);
+  const min = parseInt(input.getAttribute('min'), 10) || 0;
+  const max = parseInt(input.getAttribute('max'), 10) || 99;
+  let v = parseInt(input.value, 10);
+  if (isNaN(v)) v = min;
+  v = Math.max(min, Math.min(max, v + dir));
+  input.value = input.id === 'ciCount' ? String(v) : String(v).padStart(2, '0');
+});
+
+els.checkinSaveBtn.addEventListener('click', saveCheckin);
+els.checkinEnabled.addEventListener('change', saveCheckin);
 
 function updateTabVisibility() {
   var tabIds = ['timer', 'modulation', 'block', 'themes'];
@@ -1078,10 +1257,21 @@ document.querySelectorAll('.tab-toggle').forEach(function(cb) {
   });
 });
 
+function syncTimerDisplay() {
+  chrome.runtime.sendMessage({ type: 'QUERY_COUNTDOWN' }, r => {
+    if (!r) return;
+    if (r.state === 'running' && r.endTime) startDisplayTick(r.endTime, r.totalMs);
+    else if (r.state === 'paused') setPausedDisplay(r.pausedRemaining * 1000, r.totalMs);
+    else resetTimerDisplay();
+  });
+}
+
 chrome.runtime.onMessage.addListener((message) => {
   if (message.type === 'CAPTURE_ENDED') {
-    resetTimer();
     setCapturing(false);
+    // Timer is independent of capture — re-sync its display from the
+    // background state instead of resetting it (capture may keep running).
+    syncTimerDisplay();
   }
 });
 
@@ -1140,9 +1330,8 @@ chrome.runtime.sendMessage({ type: 'QUERY_STATUS' }, (response) => {
   }
   // Always restore the countdown display, even if capture was already stopped
   // by a lost alarm — avoids showing 00:00 while time is actually remaining.
-  chrome.runtime.sendMessage({ type: 'QUERY_COUNTDOWN' }, r => {
-    if (r && r.active && r.endTime) startDisplayTick(r.endTime);
-  });
+  syncTimerDisplay();
+  refreshCheckinUI();
 });
 
 
