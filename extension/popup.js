@@ -18,6 +18,8 @@ let crossoverMode = 'low';
 let enabledTabs = ['timer', 'modulation', 'block', 'themes'];
 let showSuggestions = true;
 let reasonContentMode = 'suggestions'; // 'none'|'suggestions'|'articles'
+const MAX_TIMER_SECONDS = 86400; // hard cap: 24 h
+let defaultTimerMinutes = 10; // persisted via timerDefaultMinutes
 
 
 
@@ -102,13 +104,18 @@ const els = {
   newSiteInput: document.getElementById('newSiteInput'),
   addSiteBtn: document.getElementById('addSiteBtn'),
   timerDisplay: document.getElementById('timerDisplay'),
-  countdownControls: document.getElementById('countdownControls'),
-  ringProgress: document.getElementById('ringProgress'),
-  presetBtns: document.querySelectorAll('.preset-btn'),
+  timerOrb: document.getElementById('timerOrb'),
+  trackCanvas: document.getElementById('trackCanvas'),
+  trackPct: document.getElementById('trackPct'),
+  addChips: document.querySelectorAll('.add-chip'),
   customMinutes: document.getElementById('customMinutes'),
-  startBtn: document.getElementById('startBtn'),
-  pauseBtn: document.getElementById('pauseBtn'),
-  resumeBtn: document.getElementById('resumeBtn'),
+  playPauseBtn: document.getElementById('playPauseBtn'),
+  playPauseLabel: document.getElementById('playPauseLabel'),
+  icPlay: document.getElementById('icPlay'),
+  icPause: document.getElementById('icPause'),
+  icStopSquare: document.getElementById('icStopSquare'),
+  icReset: document.getElementById('icReset'),
+  defaultMinutes: document.getElementById('defaultMinutes'),
   stopBtn: document.getElementById('stopBtn'),
   checkinEnabled: document.getElementById('checkinEnabled'),
   ciFromH: document.getElementById('ciFromH'),
@@ -359,18 +366,187 @@ function formatTime(ms) {
   return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
 }
 
-// ---- Progress ring ----
+// ---- Progress track (Gravity Defied-style course) ----
+// Random course per timer start; the rider travels the arc length as
+// time passes. The seed is stored so popup reopens show the same track.
+// Colors are read from --accent at draw time (st-low re-points it to
+// --danger), so themes recolor the track without JS changes.
 
-const RING_CIRCUMFERENCE = 2 * Math.PI * 54;
-if (els.ringProgress) {
-  els.ringProgress.style.strokeDasharray = RING_CIRCUMFERENCE.toFixed(2);
+let trackSeed = null;
+let trackPts = null, trackCum = null, trackTotalLen = 0;
+let trackW = 0, trackH = 0;
+
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    var t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function trackHexToRgb(hex) {
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec((hex || '').trim());
+  if (!m) return [95, 201, 138];
+  let h = m[1];
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+
+function trackAccel() {
+  // Computed on the container so .st-low's --accent re-point applies
+  return trackHexToRgb(getComputedStyle(els.timerOrb).getPropertyValue('--accent'));
+}
+
+// Apply a persisted seed (from storage on open; replaces any transient course)
+function trackApplySeed(seed) {
+  if (seed == null || seed === trackSeed) return;
+  trackSeed = seed;
+  trackPts = null;
+}
+
+// Fresh course for a newly started timer
+function trackNewCourse() {
+  trackSeed = (Date.now() & 0x7fffffff) | 1;
+  trackPts = null;
+  chrome.storage.local.set({ timerTrackSeed: trackSeed });
+}
+
+function trackClearCourse() {
+  trackSeed = null;
+  trackPts = null;
+  chrome.storage.local.remove('timerTrackSeed');
+}
+
+function trackBuildCourse() {
+  const rng = mulberry32(trackSeed || 1);
+  const W = trackW, H = trackH;
+  const n = 70, mx = 10, dx = (W - 2 * mx) / n;
+  const baseY = H * 0.66, climb = H * 0.30;   // finish always above start
+  const maxDy = dx * 1.1;                      // ~48° max slope
+  let v = [], y = 0;
+  for (let i = 0; i <= n; i++) { v.push(y); y += (rng() * 2 - 1) * H * 0.055; y *= 0.88; }
+  for (let k = 0; k < 2; k++) v = v.map((a, i) => (v[Math.max(0, i - 1)] + a * 2 + v[Math.min(n, i + 1)]) / 4);
+  trackPts = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const yy = baseY - climb * t + v[i] * (1 - Math.abs(2 * t - 1) * 0.25);
+    trackPts.push({ x: mx + t * (W - 2 * mx), y: Math.max(H * 0.16, Math.min(H - 10, yy)) });
+  }
+  for (let i = 1; i <= n; i++) {
+    const d = trackPts[i].y - trackPts[i - 1].y;
+    if (Math.abs(d) > maxDy) trackPts[i].y = trackPts[i - 1].y + Math.sign(d) * maxDy;
+  }
+  // force finish strictly above start: shift the last 25% toward target
+  const target = trackPts[0].y - climb;
+  const i0 = Math.floor(n * 0.75), delta = target - trackPts[n].y;
+  if (delta < 0) for (let i = i0; i <= n; i++) trackPts[i].y += delta * ((i - i0) / (n - i0)) * 0.9;
+  trackCum = [0]; trackTotalLen = 0;
+  for (let i = 1; i <= n; i++) {
+    trackTotalLen += Math.hypot(trackPts[i].x - trackPts[i - 1].x, trackPts[i].y - trackPts[i - 1].y);
+    trackCum.push(trackTotalLen);
+  }
+}
+
+function trackEnsure() {
+  if (trackPts) return;
+  if (!trackW) {
+    const dpr = window.devicePixelRatio || 1;
+    trackW = els.trackCanvas.clientWidth || 212;
+    trackH = els.trackCanvas.clientHeight || 64;
+    els.trackCanvas.width = trackW * dpr;
+    els.trackCanvas.height = trackH * dpr;
+    els.trackCanvas.getContext('2d').scale(dpr, dpr);
+  }
+  if (trackSeed == null) {
+    // transient idle preview — not persisted; a real start mints a new seed
+    trackSeed = (Date.now() & 0x7fffffff) | 1;
+  }
+  trackBuildCourse();
+}
+
+function trackPosAt(p) {
+  const d = p * trackTotalLen;
+  let i = 1; while (i < trackCum.length && trackCum[i] < d) i++;
+  const a = trackPts[i - 1], b = trackPts[i];
+  const f = (d - trackCum[i - 1]) / (trackCum[i] - trackCum[i - 1] || 1);
+  return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, ang: Math.atan2(b.y - a.y, b.x - a.x) };
+}
+
+function trackDraw(p) {
+  trackEnsure();
+  const ctx = els.trackCanvas.getContext('2d');
+  const W = trackW, H = trackH;
+  const rgb = trackAccel();
+  const acc = a => 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + a + ')';
+  ctx.clearRect(0, 0, W, H);
+
+  // 3D ribbon road: skewed bottom edge + rungs (see prototypes/gravity_timer)
+  const DEPTH = 7, SKEW = 5, RUNG = 7;
+  const bottom = trackPts.map(q => ({ x: q.x + SKEW, y: q.y + DEPTH }));
+  ctx.strokeStyle = acc(1); ctx.lineJoin = 'round';
+  ctx.lineWidth = 0.9;
+  for (let i = 0; i < trackPts.length; i += RUNG) {
+    ctx.beginPath(); ctx.moveTo(trackPts[i].x, trackPts[i].y); ctx.lineTo(bottom[i].x, bottom[i].y); ctx.stroke();
+  }
+  const last = trackPts.length - 1;
+  ctx.beginPath(); ctx.moveTo(trackPts[last].x, trackPts[last].y); ctx.lineTo(bottom[last].x, bottom[last].y); ctx.stroke();
+  ctx.strokeStyle = acc(0.6); ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  bottom.forEach((q, i) => i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y));
+  ctx.stroke();
+  ctx.strokeStyle = acc(1); ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  trackPts.forEach((q, i) => i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y));
+  ctx.stroke();
+
+  // start marker
+  ctx.strokeStyle = 'rgba(233,235,233,0.45)'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.arc(trackPts[0].x, trackPts[0].y, 3, 0, Math.PI * 2); ctx.stroke();
+
+  // finish checkered flag
+  const f = trackPts[last];
+  ctx.strokeStyle = acc(1); ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(f.x, f.y - 11); ctx.stroke();
+  ctx.strokeStyle = 'rgba(233,235,233,0.8)'; ctx.lineWidth = 0.8;
+  ctx.strokeRect(f.x, f.y - 11, 7, 5);
+  ctx.fillStyle = acc(1);
+  for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++)
+    if ((r + c) % 2 === 0) ctx.fillRect(f.x + c * 3.5, f.y - 11 + r * 2.5, 3.5, 2.5);
+
+  // rider at progress
+  const q = trackPosAt(p);
+  ctx.save();
+  ctx.translate(q.x, q.y); ctx.rotate(q.ang);
+  ctx.strokeStyle = '#e9ebe9'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.arc(-4.5, -2, 2.4, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(4.5, -2, 2.4, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-4.5, -2); ctx.lineTo(4.5, -2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -2); ctx.lineTo(-0.8, -7); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-0.8, -8.8, 1.6, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+
+  // glowing progress dot under the bike
+  ctx.save();
+  ctx.shadowColor = acc(1); ctx.shadowBlur = 6;
+  ctx.fillStyle = acc(1);
+  ctx.beginPath(); ctx.arc(q.x, q.y, 2.2, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(q.x, q.y, 1, 0, Math.PI * 2); ctx.fill();
 }
 
 function renderRing(remainingMs) {
-  if (!els.ringProgress) return;
-  const total = ringTotalMs && ringTotalMs > 0 ? ringTotalMs : 0;
-  const fraction = total ? Math.max(0, Math.min(1, remainingMs / total)) : 0;
-  els.ringProgress.style.strokeDashoffset = (RING_CIRCUMFERENCE * (1 - fraction)).toFixed(2);
+  if (!els.trackCanvas) return;
+  let traveled;
+  if (timerState === 'idle') {
+    traveled = 0;
+  } else {
+    const total = ringTotalMs && ringTotalMs > 0 ? ringTotalMs : 0;
+    traveled = total ? Math.max(0, Math.min(1, 1 - remainingMs / total)) : 0;
+  }
+  if (els.trackPct) els.trackPct.textContent = Math.round(traveled * 100) + '%';
+  trackDraw(traveled);
 }
 
 function currentTimerMs() {
@@ -379,12 +555,43 @@ function currentTimerMs() {
   return 0;
 }
 
-function updateTimerButtons() {
-  els.startBtn.style.display = timerState === 'idle' ? 'inline-block' : 'none';
-  els.startBtn.textContent = timerState === 'idle' ? 'Start' : 'Add';
-  els.pauseBtn.style.display = timerState === 'running' ? 'inline-block' : 'none';
-  els.resumeBtn.style.display = timerState === 'paused' ? 'inline-block' : 'none';
-  els.stopBtn.style.display = timerState === 'idle' ? 'none' : 'inline-block';
+function updateTimerUI() {
+  // Orb state class (drives glow/pulse/recolor in aero.css)
+  if (els.timerOrb) {
+    const st = timerState === 'running' ? 'st-running' : timerState === 'paused' ? 'st-paused' : 'st-idle';
+    els.timerOrb.classList.remove('st-idle', 'st-running', 'st-paused', 'st-low');
+    els.timerOrb.classList.add(st);
+    if (timerState === 'running' && currentTimerMs() > 0 && currentTimerMs() <= 60000) {
+      els.timerOrb.classList.add('st-low');
+    }
+  }
+  // Big button morphs: play (idle/resume) ⇄ pause (running)
+  const running = timerState === 'running';
+  if (els.icPlay) els.icPlay.style.display = running ? 'none' : 'block';
+  if (els.icPause) els.icPause.style.display = running ? 'block' : 'none';
+  if (els.playPauseLabel) {
+    els.playPauseLabel.textContent = timerState === 'idle' ? 'Start' : running ? 'Pause' : 'Resume';
+  }
+  if (els.playPauseBtn) {
+    const label = timerState === 'idle' ? 'Start' : running ? 'Pause' : 'Resume';
+    els.playPauseBtn.title = label;
+    els.playPauseBtn.setAttribute('aria-label', label + ' timer');
+  }
+  if (els.stopBtn) {
+    const idle = timerState === 'idle';
+    // Idle: stop acts as "reset pending duration", only needed once chips
+    // moved it off the default — otherwise it stays disabled.
+    const pendingDirty = idle && pendingSeconds() !== defaultTimerMinutes * 60;
+    els.stopBtn.disabled = idle && !pendingDirty;
+    els.stopBtn.classList.toggle('dim', idle && !pendingDirty);
+    // Idle-dirty shows the reset arrow; square otherwise
+    if (els.icReset) els.icReset.style.display = pendingDirty ? 'block' : 'none';
+    if (els.icStopSquare) els.icStopSquare.style.display = pendingDirty ? 'none' : 'block';
+  }
+}
+
+function showTime(ms) {
+  els.timerDisplay.textContent = formatTime(ms);
 }
 
 function displayTick() {
@@ -394,8 +601,9 @@ function displayTick() {
     resetTimerDisplay();
     return;
   }
-  els.timerDisplay.textContent = formatTime(remaining);
+  showTime(remaining);
   renderRing(remaining);
+  updateTimerUI();
   renderHomeTimer();
 }
 
@@ -407,7 +615,7 @@ function startDisplayTick(endTime, totalMs) {
   if (totalMs) ringTotalMs = totalMs;
   displayInterval = setInterval(displayTick, 100);
   displayTick();
-  updateTimerButtons();
+  updateTimerUI();
 }
 
 function setPausedDisplay(remainingMs, totalMs) {
@@ -415,9 +623,9 @@ function setPausedDisplay(remainingMs, totalMs) {
   timerState = 'paused';
   displayPausedRemaining = remainingMs;
   if (totalMs) ringTotalMs = Math.max(totalMs, remainingMs);
-  els.timerDisplay.textContent = formatTime(remainingMs);
+  showTime(remainingMs);
   renderRing(remainingMs);
-  updateTimerButtons();
+  updateTimerUI();
   renderHomeTimer();
 }
 
@@ -434,9 +642,7 @@ const homeEls = {
   timerPlay: document.getElementById('homeTimerPlay'),
   amCard: document.getElementById('cardModulation'),
   amState: document.getElementById('homeAmState'),
-  amPlay: document.getElementById('homeAmPlay'),
-  title: document.getElementById('homeTitle'),
-  greeting: document.getElementById('homeGreeting')
+  amPlay: document.getElementById('homeAmPlay')
 };
 
 function renderHomeTimer() {
@@ -451,10 +657,6 @@ function renderHomeTimer() {
     homeEls.countdown.textContent = '00:00';
     homeEls.countdown.classList.remove('active');
   }
-  homeEls.title.classList.toggle('live', active);
-  homeEls.greeting.textContent =
-    timerState === 'running' ? 'Session in progress' :
-    timerState === 'paused' ? 'Session paused' : 'Focus board';
 }
 
 function renderHomeAM() {
@@ -493,14 +695,22 @@ document.querySelectorAll('.home-card[data-goto]').forEach(card => {
   });
 });
 
+// Pending duration (idle): what the +chips accumulated, driven by the hidden input
+function pendingSeconds() {
+  const m = parseInt(els.customMinutes.value);
+  if (isNaN(m)) return 600;
+  return Math.max(60, Math.min(MAX_TIMER_SECONDS, m * 60));
+}
+
 function resetTimerDisplay() {
   stopDisplayTick();
   timerState = 'idle';
   displayPausedRemaining = null;
   ringTotalMs = null;
-  els.timerDisplay.textContent = '00:00';
+  trackClearCourse();
+  showTime(pendingSeconds() * 1000);
   renderRing(0);
-  updateTimerButtons();
+  updateTimerUI();
   renderHomeTimer();
 }
 
@@ -695,10 +905,10 @@ homeEls.amPlay.addEventListener('click', (e) => {
 function startCountdownFromInput() {
   const minutes = parseInt(els.customMinutes.value);
   const seconds = minutes * 60;
-  if (seconds > 0 && seconds <= 5400) {
+  if (seconds > 0 && seconds <= MAX_TIMER_SECONDS) {
     chrome.runtime.sendMessage({ type: 'START_COUNTDOWN', seconds }, r => {
       if (r && r.endTime) {
-        els.presetBtns.forEach(b => b.classList.remove('active'));
+        trackNewCourse();
         startDisplayTick(r.endTime, seconds * 1000);
       }
     });
@@ -730,6 +940,9 @@ function resumeCountdown() {
 }
 
 function stopCountdown() {
+  if (timerState === 'idle') {
+    els.customMinutes.value = defaultTimerMinutes; // pending duration back to the default
+  }
   chrome.runtime.sendMessage({ type: 'STOP_COUNTDOWN' });
   resetTimerDisplay();
 }
@@ -847,27 +1060,44 @@ els.modeBlockBtn.addEventListener('click', () => {
   updateModeUI();
 });
 
-els.presetBtns.forEach(btn => {
+// Idle: chips accumulate into the pending duration (cap 24 h).
+// Running/paused: chips add minutes to the remaining time.
+els.addChips.forEach(btn => {
   btn.addEventListener('click', () => {
     const seconds = parseInt(btn.dataset.seconds);
     if (timerState === 'idle') {
-      // Idle: preset selects the duration and gets the accent highlight
-      els.presetBtns.forEach(b => b.classList.toggle('active', b === btn));
-      els.customMinutes.value = seconds / 60;
+      const next = Math.min(MAX_TIMER_SECONDS, pendingSeconds() + seconds);
+      els.customMinutes.value = next / 60;
+      showTime(next * 1000);
+      renderRing(0);
+      updateTimerUI(); // re-evaluate the idle stop (reset) button
     } else {
       addCountdownSeconds(seconds);
     }
   });
 });
 
-// Timer runs independently of modulation capture — no implicit capture here
-els.startBtn.addEventListener('click', () => {
-  if (timerState === 'idle') startCountdownFromInput();
-  else addCountdownSeconds(parseInt(els.customMinutes.value) * 60);
+// Default-value field: persists and, when idle, feeds the pending duration
+els.defaultMinutes.addEventListener('change', () => {
+  const v = parseInt(els.defaultMinutes.value);
+  if (isNaN(v)) { els.defaultMinutes.value = defaultTimerMinutes; return; }
+  defaultTimerMinutes = Math.max(1, Math.min(1440, v));
+  els.defaultMinutes.value = defaultTimerMinutes;
+  chrome.storage.local.set({ timerDefaultMinutes: defaultTimerMinutes });
+  if (timerState === 'idle') {
+    els.customMinutes.value = defaultTimerMinutes;
+    showTime(defaultTimerMinutes * 60000);
+    renderRing(0);
+    updateTimerUI();
+  }
 });
 
-els.pauseBtn.addEventListener('click', pauseCountdown);
-els.resumeBtn.addEventListener('click', resumeCountdown);
+// Big round button morphs: idle→start, running→pause, paused→resume
+els.playPauseBtn.addEventListener('click', () => {
+  if (timerState === 'running') pauseCountdown();
+  else if (timerState === 'paused') resumeCountdown();
+  else startCountdownFromInput();
+});
 
 els.stopBtn.addEventListener('click', stopCountdown);
 
@@ -1276,6 +1506,21 @@ chrome.runtime.onMessage.addListener((message) => {
 });
 
 (async () => {
+  // Track seed first — the timer sync below may draw before the rest loads
+  var trackSeedResult = await chrome.storage.local.get('timerTrackSeed');
+  trackApplySeed(trackSeedResult.timerTrackSeed);
+  // Persisted default timer duration
+  var defResult = await chrome.storage.local.get('timerDefaultMinutes');
+  if (defResult.timerDefaultMinutes) {
+    defaultTimerMinutes = Math.max(1, Math.min(1440, defResult.timerDefaultMinutes));
+  }
+  if (els.defaultMinutes) els.defaultMinutes.value = defaultTimerMinutes;
+  if (timerState === 'idle') {
+    els.customMinutes.value = defaultTimerMinutes;
+    showTime(defaultTimerMinutes * 60000);
+    renderRing(0);
+    updateTimerUI();
+  }
   await loadSettings();
   await loadBlockedSites();
   await loadBlockingMode();
@@ -1312,6 +1557,7 @@ chrome.runtime.onMessage.addListener((message) => {
   renderThemes();
   updateUnlockButton();
   renderDeepCleanList();
+  if (timerState === 'idle') renderRing(0); // dim course preview while idle
 })();
 
 chrome.storage.local.get('userPresets', result => {

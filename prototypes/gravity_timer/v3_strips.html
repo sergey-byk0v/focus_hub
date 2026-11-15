@@ -1,0 +1,182 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Gravity Timer — v3 compact strips (in-popup layout)</title>
+<style>
+  body {
+    --bg: #242628;
+    --surface-card: #363a3c;
+    --surface: #2c2f31;
+    --accent: #5fc98a;
+    --accent-soft: rgba(95, 201, 138, 0.18);
+    --text: #e9ebe9;
+    --text-secondary: #b7bcbc;
+    --text-muted: #8d938f;
+    --border: #484d4a;
+    margin: 0;
+    width: 350px; height: 600px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px;
+  }
+  .strip {
+    width: 318px;
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,.35);
+  }
+  .row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px 0;
+  }
+  .label { font-size: 12px; color: var(--text-muted); letter-spacing: .4px; }
+  .time { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .pct  { font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  canvas { display: block; width: 318px; height: 84px; }
+  .foot { font-size: 11px; color: var(--text-muted); }
+  h3 { font-size: 13px; color: var(--text-secondary); font-weight: 500; margin: 0; }
+</style>
+</head>
+<body>
+  <h3>v3 · compact strip — fits next to existing popup controls</h3>
+  <div class="strip" data-seed="21">
+    <div class="row">
+      <div class="label">FOCUS RUN</div>
+      <div class="pct" id="pctA">0%</div>
+    </div>
+    <canvas id="cA"></canvas>
+  </div>
+  <div class="strip" data-seed="34">
+    <div class="row">
+      <span class="time" id="timeB">18:42</span>
+      <div class="pct" id="pctB">0%</div>
+    </div>
+    <canvas id="cB"></canvas>
+  </div>
+  <div class="foot">two random courses · finish always above start</div>
+<script>
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const qs = new URLSearchParams(location.search);
+const STATIC_P = qs.has('p') ? parseFloat(qs.get('p')) : null;
+let seedA = parseInt(qs.get('seedA') || '21');
+let seedB = parseInt(qs.get('seedB') || '34');
+const W = 318, H = 84, dpr = window.devicePixelRatio || 1;
+
+function makeTrack(canvasId, pctId, seed0, timeId) {
+  const cv = document.getElementById(canvasId);
+  cv.width = W * dpr; cv.height = H * dpr;
+  const ctx = cv.getContext('2d');
+  ctx.scale(dpr, dpr);
+  let pts, cum, total, seed = seed0;
+
+  function genCourse() {
+    const rng = mulberry32(seed);
+    const n = 70, mx = 12, dx = (W - 2*mx) / n;
+    const baseY = H * 0.72, climb = H * 0.34;
+    const maxDy = dx * 1.1;
+    let v = [], y = 0;
+    for (let i = 0; i <= n; i++) { v.push(y); y += (rng()*2-1) * H*0.055; y *= 0.88; }
+    for (let k = 0; k < 2; k++) v = v.map((a,i) => (v[Math.max(0,i-1)] + a*2 + v[Math.min(n,i+1)]) / 4);
+    pts = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const yy = baseY - climb*t + v[i]*(1 - Math.abs(2*t-1)*0.25);
+      pts.push({ x: mx + t*(W-2*mx), y: Math.max(H*0.14, Math.min(H-10, yy)) });
+    }
+    for (let i = 1; i <= n; i++) {
+      const d = pts[i].y - pts[i-1].y;
+      if (Math.abs(d) > maxDy) pts[i].y = pts[i-1].y + Math.sign(d)*maxDy;
+    }
+    const target = pts[0].y - climb;
+    const i0 = Math.floor(n*0.75), delta = target - pts[n].y;
+    if (delta < 0) for (let i = i0; i <= n; i++) pts[i].y += delta * ((i-i0)/(n-i0)) * 0.9;
+    cum = [0]; total = 0;
+    for (let i = 1; i <= n; i++) {
+      total += Math.hypot(pts[i].x-pts[i-1].x, pts[i].y-pts[i-1].y);
+      cum.push(total);
+    }
+  }
+
+  function posAt(p) {
+    const d = p * total;
+    let i = 1; while (i < cum.length && cum[i] < d) i++;
+    const a = pts[i-1], b = pts[i];
+    const f = (d - cum[i-1]) / (cum[i]-cum[i-1] || 1);
+    return { x: a.x + (b.x-a.x)*f, y: a.y + (b.y-a.y)*f };
+  }
+
+  function draw(p) {
+    ctx.clearRect(0, 0, W, H);
+    const acc = '#5fc98a';
+    // 3D ribbon road
+    const DEPTH = 7, SKEW = 5, RUNG_EVERY = 7;
+    const bottom = pts.map(q => ({ x: q.x + SKEW, y: q.y + DEPTH }));
+    ctx.strokeStyle = acc; ctx.lineJoin = 'round';
+    ctx.lineWidth = 0.8;
+    for (let i = 0; i < pts.length; i += RUNG_EVERY) {
+      ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(bottom[i].x, bottom[i].y); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.moveTo(pts[pts.length-1].x, pts[pts.length-1].y);
+    ctx.lineTo(bottom[pts.length-1].x, bottom[pts.length-1].y); ctx.stroke();
+    ctx.strokeStyle = 'rgba(95,201,138,0.6)'; ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    bottom.forEach((q,i) => i ? ctx.lineTo(q.x,q.y) : ctx.moveTo(q.x,q.y));
+    ctx.stroke();
+    // top edge
+    ctx.strokeStyle = acc; ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    pts.forEach((q,i) => i ? ctx.lineTo(q.x,q.y) : ctx.moveTo(q.x,q.y));
+    ctx.stroke();
+    // finish flag (small checkered)
+    const f = pts[pts.length-1];
+    ctx.strokeStyle = acc; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(f.x, f.y-11); ctx.stroke();
+    ctx.strokeStyle = 'rgba(233,235,233,0.8)'; ctx.lineWidth = 0.8;
+    ctx.strokeRect(f.x, f.y-11, 7, 5);
+    ctx.fillStyle = acc;
+    for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++)
+      if ((r + c) % 2 === 0) ctx.fillRect(f.x + c*3.5, f.y-11 + r*2.5, 3.5, 2.5);
+    // dot
+    const q = posAt(p);
+    ctx.save();
+    ctx.shadowColor = acc; ctx.shadowBlur = 8;
+    ctx.fillStyle = acc;
+    ctx.beginPath(); ctx.arc(q.x, q.y, 2.8, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(q.x, q.y, 1.3, 0, Math.PI*2); ctx.fill();
+  }
+
+  const pctEl = document.getElementById(pctId);
+  const timeEl = timeId ? document.getElementById(timeId) : null;
+  function fmt(sec){ sec=Math.max(0,Math.round(sec)); return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'); }
+
+  genCourse();
+  if (STATIC_P !== null) {
+    pctEl.textContent = Math.round(STATIC_P*100)+'%';
+    if (timeEl) timeEl.textContent = fmt(25*60*(1-STATIC_P));
+    draw(STATIC_P);
+  } else {
+    const DEMO = 12000, TOTAL = 25*60;
+    let start = performance.now();
+    (function loop(now){
+      const p = ((now - start) % DEMO) / DEMO;
+      if (((now - start) / DEMO | 0) !== ((now - start - 16) / DEMO | 0)) { seed++; genCourse(); }
+      pctEl.textContent = Math.round(p*100)+'%';
+      if (timeEl) timeEl.textContent = fmt(TOTAL*(1-p));
+      draw(p);
+      requestAnimationFrame(loop);
+    })(start);
+  }
+}
+
+makeTrack('cA', 'pctA', seedA, null);
+makeTrack('cB', 'pctB', seedB, 'timeB');
+</script>
+</body>
+</html>

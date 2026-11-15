@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<!-- THROWAWAY PROTOTYPE — timer controls variants (companion to timer_ring_orb_glass.html).
+     Orb was picked; these are 3+ ways to remake/replace the preset + Start/Pause/Stop buttons.
+     If picked, new recipes move into extension/aero.css. -->
+<html>
+<head>
+<meta charset="utf-8">
+<title>Timer controls — variants</title>
+<link rel="stylesheet" href="../extension/aero.css">
+<style>
+  body {
+    margin: 0; padding: 14px 18px 22px; width: 706px; box-sizing: border-box;
+    font-family: 'Segoe UI', system-ui, sans-serif; color: var(--text, #e9ebe9); background: #242628;
+  }
+  body.aero { background: #242628; }
+  h1 { font-size: 16px; margin: 0 0 2px; }
+  p.intro { font-size: 12px; color: var(--text-secondary); margin: 2px 0 14px; }
+  .variant { margin-bottom: 18px; }
+  .vhead { display: flex; align-items: baseline; gap: 10px; margin-bottom: 2px; }
+  .vhead b { font-size: 14px; }
+  .vhead span { font-size: 12px; color: var(--text-secondary); }
+  .vrow { display: flex; gap: 12px; }
+  .vcard { width: 320px; padding: 10px 12px 12px; border-radius: 8px; box-sizing: border-box; }
+
+  /* ---- orb (picked direction A, trimmed copy) ---- */
+  .orb-wrap { position: relative; width: 132px; height: 132px; margin: 2px auto 8px; }
+  .orb-wrap > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .rim    { fill: none; stroke: var(--glass-border, rgba(255,255,255,.30)); stroke-width: 1.4; }
+  .track  { fill: none; stroke: rgba(0,0,0,0.48); stroke-width: 9; }
+  .prog, .pulse { fill: none; stroke-width: 9; stroke-linecap: round; stroke-dasharray: 100; }
+  .prog  { transition: stroke-dashoffset 0.1s linear; }
+  .pulse { stroke: var(--accent); opacity: 0; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 60%, transparent)); }
+  .stop-hi  { stop-color: color-mix(in srgb, var(--accent) 55%, #ffffff); }
+  .stop-mid { stop-color: var(--accent); }
+  .stop-lo  { stop-color: color-mix(in srgb, var(--accent) 72%, #000000); }
+  .dot { fill: #f2f5f2; }
+  .dot-g { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+  .orb-puck {
+    position: absolute; left: 50%; top: 50%; width: 96px; height: 96px;
+    transform: translate(-50%, -50%); border: none; border-radius: 50%;
+    background: linear-gradient(180deg, var(--glass-fill-a), var(--glass-fill-b) 55%, var(--glass-fill-c));
+    box-shadow: inset 0 1px 0 var(--glass-sheen), inset 0 -2px 4px rgba(0,0,0,0.30), 0 3px 10px rgba(0,0,0,0.45);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .orb-puck::before {
+    content: ''; position: absolute; left: 8%; right: 8%; top: 4%; height: 44%;
+    border-radius: 50% 50% 45% 45% / 62% 62% 38% 38%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.32), rgba(255,255,255,0.04) 85%, transparent);
+    pointer-events: none;
+  }
+  .orb-time { font-size: 21px; font-weight: 700; letter-spacing: -0.3px; font-variant-numeric: tabular-nums; }
+  .orb-cap { font-size: 8.5px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-secondary); margin-top: 2px; }
+  .st-idle .prog { opacity: 0.35; }
+  .st-running .pulse { animation: breathe 3.2s ease-in-out infinite; }
+  .st-low { --accent: var(--danger, #ff4757); }
+  @keyframes breathe { 0%,100% { opacity: 0.10; } 50% { opacity: 0.50; } }
+
+  /* ================= V1: segmented presets + morphing primary ================= */
+  .v1 .aero-seg { padding: 3px; margin-bottom: 8px; }
+  .v1 .aero-seg button { padding: 5px 0; font-size: 12.5px; }
+  .v1 .actions { display: flex; gap: 6px; }
+  .v1 .actions .main { flex: 1; }
+  .v1 .actions .ghost { flex: 1; padding: 6px 8px; font-size: 12.5px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; }
+  .v1 .actions svg { width: 9px; height: 9px; flex-shrink: 0; }
+
+  /* ================= V2: round satellites ================= */
+  .v2 .chips { display: flex; gap: 6px; justify-content: center; margin-bottom: 10px; }
+  .v2 .chip { padding: 4px 14px; font-size: 12.5px; border-radius: 999px; cursor: pointer; }
+  .v2 .sat-row { display: flex; gap: 14px; justify-content: center; align-items: center; }
+  .rbtn {
+    border: none; border-radius: 50%; cursor: pointer; position: relative;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .rbtn.big {
+    width: 46px; height: 46px; color: #0b1a12;
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--accent) 55%, #ffffff) 0%,
+      color-mix(in srgb, var(--accent) 92%, #ffffff) 48%,
+      var(--accent) 52%,
+      color-mix(in srgb, var(--accent) 72%, #000000) 100%);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.25), inset 0 -1px 2px rgba(0,0,0,0.15);
+  }
+  .rbtn.big::after {
+    content: ''; position: absolute; left: 3px; right: 3px; top: 2px; height: 46%;
+    border-radius: 50%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0.02) 85%, transparent);
+    pointer-events: none;
+  }
+  .rbtn.sm {
+    width: 36px; height: 36px; color: var(--text-secondary, #b7bcbc);
+    background: linear-gradient(180deg, var(--glass-fill-a), var(--glass-fill-b) 55%, var(--glass-fill-c));
+    box-shadow: inset 0 1px 0 var(--glass-sheen), 0 2px 5px rgba(0,0,0,0.2);
+  }
+  .rbtn.sm::before {
+    content: ''; position: absolute; left: 4px; right: 4px; top: 2px; height: 42%;
+    border-radius: 50%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.22), transparent);
+    pointer-events: none;
+  }
+  .rbtn svg { width: 13px; height: 13px; }
+  .rbtn.big svg { width: 15px; height: 15px; }
+  .rbtn.danger-ic { color: var(--danger, #ff4757); }
+  .rbtn.dim { opacity: 0.4; cursor: default; }
+  .rbtn:not(.dim):hover { filter: brightness(1.15); }
+
+  /* ================= V3: buttonless orb + stepper ================= */
+  .v3 .orb-btn { cursor: pointer; border-radius: 50%; }
+  .v3 .orb-btn:active .orb-puck { filter: brightness(0.9); }
+  .v3 .glyph {
+    width: 27px; height: 27px; margin-top: 4px; border: none; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    color: #0b1a12; background: linear-gradient(180deg,
+      color-mix(in srgb, var(--accent) 55%, #ffffff), var(--accent) 55%,
+      color-mix(in srgb, var(--accent) 72%, #000000));
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.5);
+  }
+  .v3 .glyph svg { width: 10px; height: 10px; }
+  .v3 .stepper { display: flex; gap: 6px; align-items: stretch; max-width: 190px; margin: 0 auto; }
+  .v3 .stepbtn { width: 34px; padding: 0; font-size: 15px; cursor: pointer; }
+  .v3 .stepval { flex: 1; display: flex; align-items: center; justify-content: center;
+    font-size: 12.5px; font-weight: bold; font-variant-numeric: tabular-nums; cursor: default; }
+  .stop-badge {
+    position: absolute; top: -1px; right: 3px; width: 24px; height: 24px;
+    border: none; border-radius: 50%; cursor: pointer;
+    color: var(--danger, #ff4757);
+    background: linear-gradient(180deg, var(--glass-fill-a), var(--glass-fill-c));
+    box-shadow: inset 0 1px 0 var(--glass-sheen), 0 2px 5px rgba(0,0,0,0.35);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stop-badge svg { width: 9px; height: 9px; }
+  .st-running .stop-badge, .v3run .stop-badge { color: var(--danger); }
+
+  .summary { margin-top: 6px; font-size: 12px; color: var(--text-subtle); line-height: 1.55; }
+  .summary b { color: var(--text-secondary); }
+</style>
+</head>
+<body class="aero">
+
+<h1>Timer controls — 3 variants + a buttonless option</h1>
+<p class="intro">Companion to the orb sheet. Every variant shows idle (left) and running (right) at real popup card size. The current heavy flex chips are gone in all of them.</p>
+
+<!-- ============ V1 ============ -->
+<div class="variant v1">
+  <div class="vhead"><b>V1 — Segmented presets + morphing primary</b><span>one accent button that changes meaning</span></div>
+  <div class="vrow">
+    <div class="vcard aero-pane st-idle">
+      <div class="orb-wrap" data-fraction="1">
+        <div class="orb-puck"><div class="orb-time">25:00</div><div class="orb-cap">Ready to focus</div></div>
+        <svg viewBox="0 0 120 120">
+          <defs><linearGradient id="q1" x1="0" y1="0" x2="0" y2="1"><stop class="stop-hi" offset="0"/><stop class="stop-mid" offset="0.52"/><stop class="stop-lo" offset="1"/></linearGradient></defs>
+          <circle class="rim" cx="60" cy="60" r="57.5"/><circle class="track" cx="60" cy="60" r="52"/><g class="ticks"></g>
+          <circle class="pulse" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)"/>
+          <circle class="prog" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)" stroke="url(#q1)"/>
+          <g class="dot-g"><circle class="dot" cx="60" cy="8" r="3.6"/></g>
+        </svg>
+      </div>
+      <div class="aero-seg">
+        <button>10</button><button>15</button><button class="active">25</button><button>45</button>
+      </div>
+      <div class="actions">
+        <button class="aero-btn primary main">Start</button>
+      </div>
+    </div>
+    <div class="vcard aero-pane st-running">
+      <div class="orb-wrap" data-fraction="0.551">
+        <div class="orb-puck"><div class="orb-time">13:47</div><div class="orb-cap">Session in progress</div></div>
+        <svg viewBox="0 0 120 120">
+          <defs><linearGradient id="q2" x1="0" y1="0" x2="0" y2="1"><stop class="stop-hi" offset="0"/><stop class="stop-mid" offset="0.52"/><stop class="stop-lo" offset="1"/></linearGradient></defs>
+          <circle class="rim" cx="60" cy="60" r="57.5"/><circle class="track" cx="60" cy="60" r="52"/><g class="ticks"></g>
+          <circle class="pulse" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)"/>
+          <circle class="prog" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)" stroke="url(#q2)"/>
+          <g class="dot-g"><circle class="dot" cx="60" cy="8" r="3.6"/></g>
+        </svg>
+      </div>
+      <div class="aero-seg">
+        <button>10</button><button>15</button><button class="active">25</button><button>45</button>
+      </div>
+      <div class="actions">
+        <button class="aero-btn glass ghost">
+          <svg viewBox="0 0 12 12" fill="currentColor"><rect x="2.5" y="1.5" width="2.6" height="9" rx="1"/><rect x="6.9" y="1.5" width="2.6" height="9" rx="1"/></svg>
+          Pause</button>
+        <button class="aero-btn glass ghost">
+          <svg viewBox="0 0 12 12" fill="currentColor"><rect x="2.5" y="2.5" width="7" height="7" rx="1.5"/></svg>
+          Stop</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ V2 ============ -->
+<div class="variant v2">
+  <div class="vhead"><b>V2 — Round satellites</b><span>buttons become circles to echo the orb</span></div>
+  <div class="vrow">
+    <div class="vcard aero-pane st-idle">
+      <div class="orb-wrap" data-fraction="1">
+        <div class="orb-puck"><div class="orb-time">25:00</div><div class="orb-cap">Ready to focus</div></div>
+        <svg viewBox="0 0 120 120">
+          <defs><linearGradient id="q3" x1="0" y1="0" x2="0" y2="1"><stop class="stop-hi" offset="0"/><stop class="stop-mid" offset="0.52"/><stop class="stop-lo" offset="1"/></linearGradient></defs>
+          <circle class="rim" cx="60" cy="60" r="57.5"/><circle class="track" cx="60" cy="60" r="52"/><g class="ticks"></g>
+          <circle class="pulse" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)"/>
+          <circle class="prog" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)" stroke="url(#q3)"/>
+          <g class="dot-g"><circle class="dot" cx="60" cy="8" r="3.6"/></g>
+        </svg>
+      </div>
+      <div class="chips">
+        <button class="aero-btn glass chip">10</button>
+        <button class="aero-btn glass chip">15</button>
+        <button class="aero-btn glass chip selected">25</button>
+        <button class="aero-btn glass chip">45</button>
+      </div>
+      <div class="sat-row">
+        <button class="rbtn big" title="Start"><svg viewBox="0 0 12 12" fill="currentColor"><path d="M3.5 1.5v9l7-4.5z"/></svg></button>
+        <button class="rbtn sm dim" title="Pause"><svg viewBox="0 0 12 12" fill="currentColor"><rect x="2.5" y="1.5" width="2.6" height="9" rx="1"/><rect x="6.9" y="1.5" width="2.6" height="9" rx="1"/></svg></button>
+        <button class="rbtn sm dim danger-ic" title="Stop"><svg viewBox="0 0 12 12" fill="currentColor"><rect x="2.5" y="2.5" width="7" height="7" rx="1.5"/></svg></button>
+      </div>
+    </div>
+    <div class="vcard aero-pane st-running">
+      <div class="orb-wrap" data-fraction="0.551">
+        <div class="orb-puck"><div class="orb-time">13:47</div><div class="orb-cap">Session in progress</div></div>
+        <svg viewBox="0 0 120 120">
+          <defs><linearGradient id="q4" x1="0" y1="0" x2="0" y2="1"><stop class="stop-hi" offset="0"/><stop class="stop-mid" offset="0.52"/><stop class="stop-lo" offset="1"/></linearGradient></defs>
+          <circle class="rim" cx="60" cy="60" r="57.5"/><circle class="track" cx="60" cy="60" r="52"/><g class="ticks"></g>
+          <circle class="pulse" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)"/>
+          <circle class="prog" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)" stroke="url(#q4)"/>
+          <g class="dot-g"><circle class="dot" cx="60" cy="8" r="3.6"/></g>
+        </svg>
+      </div>
+      <div class="chips">
+        <button class="aero-btn glass chip">10</button>
+        <button class="aero-btn glass chip">15</button>
+        <button class="aero-btn glass chip selected">25</button>
+        <button class="aero-btn glass chip">45</button>
+      </div>
+      <div class="sat-row">
+        <button class="rbtn big" title="Pause"><svg viewBox="0 0 12 12" fill="currentColor"><rect x="2.5" y="1.5" width="2.6" height="9" rx="1"/><rect x="6.9" y="1.5" width="2.6" height="9" rx="1"/></svg></button>
+        <button class="rbtn sm" title="Resume"><svg viewBox="0 0 12 12" fill="currentColor"><path d="M3.5 1.5v9l7-4.5z"/></svg></button>
+        <button class="rbtn sm danger-ic" title="Stop"><svg viewBox="0 0 12 12" fill="currentColor"><rect x="2.5" y="2.5" width="7" height="7" rx="1.5"/></svg></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ V3 ============ -->
+<div class="variant v3">
+  <div class="vhead"><b>V3 — Buttonless orb</b><span>orb itself is the button; presets become a stepper</span></div>
+  <div class="vrow">
+    <div class="vcard aero-pane st-idle">
+      <div class="orb-wrap" data-fraction="1">
+        <div class="orb-btn" title="Click to start">
+          <div class="orb-puck" style="width:104px;height:104px;">
+            <div class="orb-time">25:00</div>
+            <button class="glyph" title="Start"><svg viewBox="0 0 12 12" fill="currentColor"><path d="M3.5 1.5v9l7-4.5z"/></svg></button>
+          </div>
+        </div>
+        <svg viewBox="0 0 120 120">
+          <defs><linearGradient id="q5" x1="0" y1="0" x2="0" y2="1"><stop class="stop-hi" offset="0"/><stop class="stop-mid" offset="0.52"/><stop class="stop-lo" offset="1"/></linearGradient></defs>
+          <circle class="rim" cx="60" cy="60" r="57.5"/><circle class="track" cx="60" cy="60" r="52"/><g class="ticks"></g>
+          <circle class="pulse" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)"/>
+          <circle class="prog" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)" stroke="url(#q5)"/>
+          <g class="dot-g"><circle class="dot" cx="60" cy="8" r="3.6"/></g>
+        </svg>
+      </div>
+      <div class="stepper">
+        <button class="aero-btn glass stepbtn">&minus;</button>
+        <div class="aero-field stepval">25 min</div>
+        <button class="aero-btn glass stepbtn">+</button>
+      </div>
+    </div>
+    <div class="vcard aero-pane st-running">
+      <div class="orb-wrap" data-fraction="0.551">
+        <div class="orb-btn" title="Click to pause">
+          <div class="orb-puck" style="width:104px;height:104px;">
+            <div class="orb-time">13:47</div>
+            <button class="glyph" title="Pause"><svg viewBox="0 0 12 12" fill="currentColor"><rect x="2.5" y="1.5" width="2.6" height="9" rx="1"/><rect x="6.9" y="1.5" width="2.6" height="9" rx="1"/></svg></button>
+          </div>
+          <button class="stop-badge" title="Stop"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 3l6 6M9 3l-6 6"/></svg></button>
+        </div>
+        <svg viewBox="0 0 120 120">
+          <defs><linearGradient id="q6" x1="0" y1="0" x2="0" y2="1"><stop class="stop-hi" offset="0"/><stop class="stop-mid" offset="0.52"/><stop class="stop-lo" offset="1"/></linearGradient></defs>
+          <circle class="rim" cx="60" cy="60" r="57.5"/><circle class="track" cx="60" cy="60" r="52"/><g class="ticks"></g>
+          <circle class="pulse" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)"/>
+          <circle class="prog" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)" stroke="url(#q6)"/>
+          <g class="dot-g"><circle class="dot" cx="60" cy="8" r="3.6"/></g>
+        </svg>
+      </div>
+      <div class="stepper">
+        <button class="aero-btn glass stepbtn" disabled>&minus;</button>
+        <div class="aero-field stepval">13:47 left</div>
+        <button class="aero-btn glass stepbtn" disabled>+</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="summary">
+  <b>Trade-offs:</b><br>
+  • <b>V1</b> — least new code (aero-seg already exists); the one big button never hides, its label tells the truth. Safest pick.<br>
+  • <b>V2</b> — strongest visual echo with the orb; icons-only needs title tooltips for discoverability; +1 new recipe (round gloss button).<br>
+  • <b>V3</b> — zero button chrome, orb owns interaction (click = start/pause, &times; badge = stop); fastest daily use, worst discoverability; presets lose one-tap 10/15/45 (stepper replaces).<br>
+  • Hybrids allowed: e.g. V1 presets + V2 round play button.
+</div>
+
+<script>
+function buildTicks(svg) {
+  const g = svg.querySelector('.ticks');
+  if (!g || g.childNodes.length) return;
+  for (let i = 0; i < 60; i++) {
+    const major = i % 5 === 0;
+    const a = (i * 6 - 90) * Math.PI / 180;
+    const r1 = 47, r2 = major ? 44.4 : 45.4;
+    const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l.setAttribute('x1', 60 + r1 * Math.cos(a)); l.setAttribute('y1', 60 + r1 * Math.sin(a));
+    l.setAttribute('x2', 60 + r2 * Math.cos(a)); l.setAttribute('y2', 60 + r2 * Math.sin(a));
+    l.setAttribute('stroke', major ? 'rgba(255,255,255,0.40)' : 'rgba(255,255,255,0.20)');
+    l.setAttribute('stroke-width', major ? 1.3 : 0.9);
+    l.setAttribute('stroke-linecap', 'round');
+    g.appendChild(l);
+  }
+}
+function renderOrb(wrap, fraction) {
+  const svg = wrap.querySelector(':scope > svg');
+  buildTicks(svg);
+  const offset = (100 * (1 - fraction)).toFixed(2);
+  svg.querySelectorAll('.prog, .pulse').forEach(c => c.style.strokeDashoffset = offset);
+  const g = svg.querySelector('.dot-g');
+  if (g) {
+    const show = fraction > 0.01 && fraction < 0.995;
+    g.style.opacity = show ? 1 : 0;
+    if (show) g.setAttribute('transform', 'rotate(' + (-90 + 360 * fraction) + ' 60 60)');
+  }
+}
+document.querySelectorAll('.orb-wrap').forEach(w => renderOrb(w, parseFloat(w.dataset.fraction || 0)));
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # Focus Hub — Agent Documentation
 
-**Current release: v_0_5_0 (manifest 1.6.0)**
+**Current release: v_0_6_0 (manifest 1.7.0)**
 
 ## Agent Instructions
 
@@ -21,11 +21,11 @@
    - If you used an existing library based on Section 1, mention it in a single-line comment above the implementation.
 
 4. **Single-Source Styling (Aero design system)**
-   - All visual recipes — glass panes/strips, gloss buttons, groove fields, slide switches, aurora backdrop — live ONLY in `extension/aero.css` as utility classes: `.aero-pane`, `.aero-pane-lite`, `.aero-strip`, `.aero-btn` (`.glass` = neutral chip, `.danger` = red), `.aero-seg` (segmented control), `.aero-field`, `input.aero-switch`, `.aero-vfill`, plus `body.aero` element defaults and the aurora backdrop.
+   - All visual recipes — glass panes/strips, gloss buttons, groove fields, slide switches, aurora backdrop — live ONLY in `extension/aero.css` as utility classes: `.aero-pane`, `.aero-pane-lite`, `.aero-strip`, `.aero-btn` (`.glass` = neutral chip, `.danger` = red), `.aero-seg` (segmented control), `.aero-field`, `input.aero-switch`, `.aero-vfill`, `.aero-track` (Gravity Defied-style timer course card), plus `body.aero` element defaults and the aurora backdrop.
    - Page CSS (popup.html, block.css, reading-list.html) keeps layout/spacing/typography only — never re-declare gradient/shadow/glass recipe values.
    - Selected/active states of neutral chips promote to accent gloss via the grouped selector in aero.css (`.aero-btn.glass.selected/.active`, `.aero-seg button.active`) — do not copy the gloss recipe into state rules.
    - Dynamically created elements get their aero classes at creation time (popup.js: preset/theme/dc-config buttons, capture state swap; block.js: chart fills; reading-list.js: item rows, row buttons).
-   - `aero.css` must load BEFORE page styles; themes recolor everything through `--accent`/`--glass-*` tokens from `theme-data.js` — never hardcode hue values in page CSS (fixed card hues via `--card-accent`/`--ac` hooks are the exception).
+   - `aero.css` must load BEFORE page styles; themes recolor everything through `--accent`/`--glass-*` tokens from `theme-data.js` — never hardcode hue values in page CSS (fixed card hues via `--card-accent`/`--ac` hooks are the exception). Canvas-drawn UI (`.aero-track` course in popup.js) reads `--accent` via `getComputedStyle` at draw time — same rule, JS side.
 
 ## Release & Update Workflow
 
@@ -82,3 +82,5 @@ The release process is codified in the project skill `skills/release-focus-hub/`
 15. **No semi-transparent borders on rounded gradient elements** — Chrome (Skia) bleeds the gradient's FIRST stop as a 1px light line just below the box's bottom edge when the border (or border-color) has alpha (`transparent`, `rgba(...)`, `color-mix(... , transparent)`). Gloss buttons/tab pills/knobs therefore use `border: none`; glass panes/strips are safe only because their bottom border is opaque dark (`border-bottom-color: rgba(0,0,0,0.45)` in aero.css). Keep it that way.
 16. **Timer has three storage keys** — `countdownEndTime` (running, epoch ms), `countdownPausedRemaining` (paused, seconds), `countdownTotalMs` (ring fraction denominator). State machine: idle = neither end/paused key; all three must be cleared on stop AND on expiry (`handleTimerExpiry`). `QUERY_COUNTDOWN` returns `{state, endTime|pausedRemaining, totalMs}` — never the old `{active}` shape.
 17. **Check-in alarms are self-healing via `scheduleNextCheckin()`** — call it from `onStartup`, `onInstalled`, `CHECKIN_SAVE`, and lazily from `CHECKIN_STATUS` (day rollover regenerates, past times dropped, missing alarm recreated). Never schedule `checkin-due` from the popup or block-page contexts; `focusCheckins.times` only ever holds future timestamps for `cfg.day`.
+18. **Track timer course seed lives in storage** — `timerTrackSeed` (chrome.storage.local) holds the seeded course so popup reopens show the same track mid-session. New seed minted only in `startCountdownFromInput` (real timer start); `trackClearCourse()` on stop/idle resets it. `ADD_COUNTDOWN`/pause/resume must NOT regenerate. Idle preview uses a transient in-memory seed (not persisted); `trackApplySeed` on init replaces any race-built transient course.
+19. **Canvas accent must be re-read each draw** — the `.aero-track` canvas pulls `--accent` from `getComputedStyle(#timerOrb)` on every frame; `.st-low` re-points `--accent` to `--danger` on that container, so the track flips red automatically near expiry. Never cache the parsed color across state changes.

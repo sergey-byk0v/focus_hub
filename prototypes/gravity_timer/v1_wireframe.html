@@ -1,0 +1,210 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Gravity Timer — v1 wireframe (Gravity Defied line-art)</title>
+<style>
+  body {
+    --bg: #242628;
+    --surface-card: #363a3c;
+    --accent: #5fc98a;
+    --accent-soft: rgba(95, 201, 138, 0.18);
+    --text: #e9ebe9;
+    --text-secondary: #b7bcbc;
+    --text-muted: #8d938f;
+    --border: #484d4a;
+    margin: 0;
+    width: 350px; height: 600px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px;
+  }
+  .card {
+    width: 318px;
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,.35);
+  }
+  .hud {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 12px 14px 0;
+  }
+  .time { font-size: 30px; font-weight: 600; letter-spacing: .5px; font-variant-numeric: tabular-nums; }
+  .pct  { font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  canvas { display: block; width: 318px; height: 190px; }
+  .foot { padding: 0 14px 10px; font-size: 11px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="hud">
+      <div class="time" id="time">25:00</div>
+      <div class="pct" id="pct">0%</div>
+    </div>
+    <canvas id="c"></canvas>
+    <div class="foot">course regenerates every new run · finish is always above start</div>
+  </div>
+<script>
+// seeded rng so screenshots are reproducible (?seed=N), ?p=0.4 renders one static frame
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const qs = new URLSearchParams(location.search);
+const STATIC_P = qs.has('p') ? parseFloat(qs.get('p')) : null;
+const STATIC_REM = qs.get('rem') || '11:23';
+let seed = parseInt(qs.get('seed') || '7');
+
+const cv = document.getElementById('c');
+const dpr = window.devicePixelRatio || 1;
+const W = 318, H = 190;
+cv.width = W * dpr; cv.height = H * dpr;
+const ctx = cv.getContext('2d');
+ctx.scale(dpr, dpr);
+
+let pts, cum, total;
+
+function genCourse() {
+  const rng = mulberry32(seed);
+  const n = 90, mx = 14, dx = (W - 2*mx) / n;
+  const baseY = H * 0.72, climb = H * 0.34;           // finish must sit this much above start
+  const maxDy = dx * 1.15;                            // ~49° max slope
+  // smooth random noise
+  let v = [], y = 0;
+  for (let i = 0; i <= n; i++) { v.push(y); y += (rng()*2-1) * H*0.05; y *= 0.88; }
+  for (let k = 0; k < 2; k++) v = v.map((a,i) => (v[Math.max(0,i-1)] + a*2 + v[Math.min(n,i+1)]) / 4);
+  pts = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const yy = baseY - climb*t + v[i]*(1 - Math.abs(2*t-1)*0.25);
+    pts.push({ x: mx + t*(W-2*mx), y: Math.max(H*0.14, Math.min(H-17, yy)) });
+  }
+  // clamp slopes
+  for (let i = 1; i <= n; i++) {
+    const d = pts[i].y - pts[i-1].y;
+    if (Math.abs(d) > maxDy) pts[i].y = pts[i-1].y + Math.sign(d)*maxDy;
+  }
+  // force finish strictly above start: shift the last 25% toward target
+  const target = pts[0].y - climb;
+  const i0 = Math.floor(n*0.75), delta = target - pts[n].y;
+  if (delta < 0) for (let i = i0; i <= n; i++) pts[i].y += delta * ((i-i0)/(n-i0)) * 0.9;
+  // arc-length table
+  cum = [0]; total = 0;
+  for (let i = 1; i <= n; i++) {
+    total += Math.hypot(pts[i].x-pts[i-1].x, pts[i].y-pts[i-1].y);
+    cum.push(total);
+  }
+}
+
+function posAt(p) {
+  const d = p * total;
+  let i = 1; while (i < cum.length && cum[i] < d) i++;
+  const a = pts[i-1], b = pts[i];
+  const f = (d - cum[i-1]) / (cum[i]-cum[i-1] || 1);
+  return { x: a.x + (b.x-a.x)*f, y: a.y + (b.y-a.y)*f, ang: Math.atan2(b.y-a.y, b.x-a.x) };
+}
+
+function draw(p) {
+  ctx.clearRect(0, 0, W, H);
+  // faint dotted grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1; ctx.setLineDash([2,6]);
+  for (let gx = 20; gx < W; gx += 36) { ctx.beginPath(); ctx.moveTo(gx, 8); ctx.lineTo(gx, H-6); ctx.stroke(); }
+  for (let gy = 30; gy < H; gy += 36) { ctx.beginPath(); ctx.moveTo(6, gy); ctx.lineTo(W-6, gy); ctx.stroke(); }
+  ctx.setLineDash([]);
+
+  // 3D ribbon road: parallel bottom edge + vertical rungs (Gravity Defied track look)
+  const acc = '#5fc98a';
+  const DEPTH = 12, SKEW = 8, RUNG_EVERY = 5;   // skewed projection = sharper 3D angle
+  const bottom = pts.map(q => ({ x: q.x + SKEW, y: q.y + DEPTH }));
+
+  ctx.strokeStyle = acc; ctx.lineJoin = 'round';
+  // rungs first (behind edges)
+  ctx.lineWidth = 1;
+  for (let i = 0; i < pts.length; i += RUNG_EVERY) {
+    ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(bottom[i].x, bottom[i].y); ctx.stroke();
+  }
+  ctx.beginPath(); ctx.moveTo(pts[pts.length-1].x, pts[pts.length-1].y);
+  ctx.lineTo(bottom[pts.length-1].x, bottom[pts.length-1].y); ctx.stroke();
+  // bottom edge (slightly dimmer for depth)
+  ctx.strokeStyle = 'rgba(95,201,138,0.65)'; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  bottom.forEach((q,i) => i ? ctx.lineTo(q.x,q.y) : ctx.moveTo(q.x,q.y));
+  ctx.stroke();
+  // top edge (riding line)
+  ctx.strokeStyle = acc; ctx.lineWidth = 2;
+  ctx.beginPath();
+  pts.forEach((q,i) => i ? ctx.lineTo(q.x,q.y) : ctx.moveTo(q.x,q.y));
+  ctx.stroke();
+
+  // start marker
+  ctx.strokeStyle = 'rgba(233,235,233,0.5)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(pts[0].x, pts[0].y, 4, 0, Math.PI*2); ctx.stroke();
+
+  // finish flag — checkered, on a pole above the track (reference style)
+  function checkeredFlag(x, yTop) {
+    const fw = 11, fh = 8, cs = fh/2;
+    ctx.strokeStyle = 'rgba(233,235,233,0.8)'; ctx.lineWidth = 1;
+    ctx.strokeRect(x, yTop, fw, fh);
+    ctx.fillStyle = acc;
+    for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++)
+      if ((r + c) % 2 === 0) ctx.fillRect(x + c*fw/3, yTop + r*cs, fw/3, cs);
+  }
+  const f = pts[pts.length-1];
+  ctx.strokeStyle = acc; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(f.x, f.y-20); ctx.stroke();
+  checkeredFlag(f.x, f.y-20);
+  // mid-course checkered flag at 60%
+  const m = pts[Math.floor(pts.length*0.6)];
+  ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(m.x, m.y-16); ctx.stroke();
+  checkeredFlag(m.x, m.y-16);
+
+  // rider bike at progress
+  const q = posAt(p);
+  ctx.save();
+  ctx.translate(q.x, q.y); ctx.rotate(q.ang);
+  ctx.strokeStyle = '#e9ebe9'; ctx.fillStyle = '#e9ebe9'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.arc(-6, -3, 3.2, 0, Math.PI*2); ctx.stroke();   // rear wheel
+  ctx.beginPath(); ctx.arc( 6, -3, 3.2, 0, Math.PI*2); ctx.stroke();   // front wheel
+  ctx.beginPath(); ctx.moveTo(-6,-3); ctx.lineTo(6,-3); ctx.stroke();  // frame
+  ctx.beginPath(); ctx.moveTo(0,-3); ctx.lineTo(-1,-9); ctx.stroke();  // rider body
+  ctx.beginPath(); ctx.arc(-1,-11.5, 2.2, 0, Math.PI*2); ctx.stroke(); // head
+  ctx.beginPath(); ctx.moveTo(-1,-8); ctx.lineTo(4.5,-4); ctx.stroke();// arm to bars
+  ctx.restore();
+
+  // progress dot (glow)
+  ctx.save();
+  ctx.shadowColor = acc; ctx.shadowBlur = 8;
+  ctx.fillStyle = acc;
+  ctx.beginPath(); ctx.arc(q.x, q.y, 2.2, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+const timeEl = document.getElementById('time'), pctEl = document.getElementById('pct');
+function fmt(sec){ sec=Math.max(0,Math.round(sec)); return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'); }
+
+function renderFrame(p, remSec) {
+  timeEl.textContent = fmt(remSec);
+  pctEl.textContent = Math.round(p*100) + '%';
+  draw(p);
+}
+
+if (STATIC_P !== null) {
+  genCourse();
+  renderFrame(STATIC_P, 25*60 - STATIC_P*25*60 || 0);
+} else {
+  // accelerated demo: full 25:00 course in 12 s, then regenerate a new course
+  let start = performance.now();
+  const DEMO = 12000, TOTAL = 25*60;
+  genCourse();
+  (function loop(now){
+    const p = ((now - start) % DEMO) / DEMO;
+    if (((now - start) / DEMO | 0) !== ((now - start - 16) / DEMO | 0)) { seed++; genCourse(); }
+    renderFrame(p, TOTAL*(1-p));
+    requestAnimationFrame(loop);
+  })(start);
+}
+</script>
+</body>
+</html>

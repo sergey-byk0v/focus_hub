@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<!-- THROWAWAY PROTOTYPE — direction A: "glass orb" timer ring.
+     If picked, the .orb-* recipes move into extension/aero.css (single-source rule). -->
+<html>
+<head>
+<meta charset="utf-8">
+<title>Timer ring — direction A: glass orb</title>
+<link rel="stylesheet" href="../extension/aero.css">
+<style>
+  body {
+    margin: 0;
+    padding: 14px 18px 22px;
+    width: 800px;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: var(--text, #e9ebe9);
+    background: #242628;
+  }
+  body.aero { background: #242628; }
+  h2 { font-size: 15px; margin: 14px 0 2px; color: var(--text); }
+  p.note { font-size: 12px; color: var(--text-secondary); margin: 2px 0 12px; }
+  .row { display: flex; gap: 14px; }
+  .state { width: 178px; text-align: center; }
+  .state .tag { font-size: 12px; font-weight: 600; color: var(--text-label); margin-bottom: 2px; }
+  .state .sub { font-size: 11px; color: var(--text-subtle); margin-bottom: 8px; min-height: 14px; }
+
+  /* ---- orb recipe (candidate for aero.css) ---- */
+  .orb-wrap {
+    position: relative;
+    width: 132px; height: 132px;
+    margin: 4px auto 10px;
+  }
+  .orb-wrap svg.orb { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .rim    { fill: none; stroke: var(--glass-border, rgba(255,255,255,.30)); stroke-width: 1.4; }
+  .track  { fill: none; stroke: rgba(0,0,0,0.48); stroke-width: 9; }
+  .prog, .pulse {
+    fill: none; stroke-width: 9; stroke-linecap: round;
+    stroke-dasharray: 100;
+  }
+  .prog  { transition: stroke-dashoffset 0.1s linear; }
+  .pulse { stroke: var(--accent); opacity: 0; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 60%, transparent)); }
+  /* aero vfill recipe as SVG gradient stops (follows --accent per theme) */
+  .stop-hi  { stop-color: color-mix(in srgb, var(--accent) 55%, #ffffff); }
+  .stop-mid { stop-color: var(--accent); }
+  .stop-lo  { stop-color: color-mix(in srgb, var(--accent) 72%, #000000); }
+  .dot { fill: #f2f5f2; }
+  .dot-g { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+
+  /* glass puck (glass panes keep border: none — rounded gradient bleed trap) */
+  .orb-puck {
+    position: absolute; left: 50%; top: 50%;
+    width: 96px; height: 96px;
+    transform: translate(-50%, -50%);
+    border: none; border-radius: 50%;
+    background: linear-gradient(180deg,
+      var(--glass-fill-a, rgba(255,255,255,.11)),
+      var(--glass-fill-b, rgba(255,255,255,.035)) 55%,
+      var(--glass-fill-c, rgba(255,255,255,.07)));
+    box-shadow:
+      inset 0 1px 0 var(--glass-sheen, rgba(255,255,255,.26)),
+      inset 0 -2px 4px rgba(0,0,0,0.30),
+      0 3px 10px rgba(0,0,0,0.45);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .orb-puck::before { /* gloss dome, same recipe family as .aero-btn::after */
+    content: '';
+    position: absolute; left: 8%; right: 8%; top: 4%; height: 44%;
+    border-radius: 50% 50% 45% 45% / 62% 62% 38% 38%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.32), rgba(255,255,255,0.04) 85%, transparent);
+    pointer-events: none;
+  }
+  .orb-time {
+    font-size: 21px; font-weight: 700; letter-spacing: -0.3px;
+    font-variant-numeric: tabular-nums;
+    transition: filter 0.12s ease-out, opacity 0.2s ease-out;
+  }
+  .orb-time.blink { filter: blur(1.2px); opacity: 0.75; }
+  .orb-cap {
+    font-size: 8.5px; letter-spacing: 0.5px; text-transform: uppercase;
+    color: var(--text-secondary); margin-top: 2px;
+  }
+
+  /* ---- states ---- */
+  .st-idle .prog { opacity: 0.35; }
+  .st-idle .orb-time { opacity: 0.55; }
+  .st-idle .dot-g { opacity: 0; }
+
+  .st-running .pulse { animation: breathe 3.2s ease-in-out infinite; }
+  .st-paused .prog  { opacity: 0.55; }
+  .st-paused .pulse { animation: breathe-dim 4.6s ease-in-out infinite; }
+  .st-paused .dot-g { opacity: 0.5; }
+
+  .st-low { --accent: var(--danger, #ff4757); } /* accent follows → gradient + glow recolor */
+  .st-low .pulse { animation: breathe 1.1s ease-in-out infinite; }
+  .st-low .orb-cap { color: #ffb0b6; }
+
+  @keyframes breathe     { 0%,100% { opacity: 0.10; } 50% { opacity: 0.50; } }
+  @keyframes breathe-dim { 0%,100% { opacity: 0.06; } 50% { opacity: 0.28; } }
+
+  /* ---- live demo ---- */
+  .demo-card {
+    width: 330px; padding: 12px; border-radius: 8px;
+    display: inline-block; vertical-align: top;
+  }
+  .demo-side { display: inline-block; vertical-align: top; width: 420px; padding-left: 14px; }
+  .timer-presets { display: flex; gap: 6px; margin: 8px 0 6px; }
+  .timer-presets button { flex: 1; padding: 6px 2px; font-size: 13px; font-weight: bold; cursor: pointer; }
+  .timer-actions { display: flex; gap: 6px; }
+  .timer-actions button { padding: 6px 14px; font-size: 13px; font-weight: bold; cursor: pointer; }
+  .demo-hint { font-size: 12px; color: var(--text-subtle); margin-top: 10px; line-height: 1.5; }
+</style>
+</head>
+<body class="aero">
+
+<h2>A — Glass orb timer ring</h2>
+<p class="note">Aero puck "under glass": gloss dome, gradient vfill stroke, groove track, minute ticks, traveling head dot. Running breathes with an accent glow; last minute promotes to the red gloss recipe.</p>
+
+<div class="row">
+  <div class="state st-idle">
+    <div class="tag">Idle</div>
+    <div class="sub">dim, no glow</div>
+    <div class="orb-wrap" data-fraction="1">
+      <div class="orb-puck"><div class="orb-time">25:00</div><div class="orb-cap">Ready to focus</div></div>
+      <svg class="orb" viewBox="0 0 120 120">
+        <defs>
+          <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1">
+            <stop class="stop-hi" offset="0"/><stop class="stop-mid" offset="0.52"/><stop class="stop-lo" offset="1"/>
+          </linearGradient>
+        </defs>
+        <circle class="rim" cx="60" cy="60" r="57.5"/>
+        <circle class="track" cx="60" cy="60" r="52"/>
+        <g class="ticks"></g>
+        <circle class="pulse" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)"/>
+        <circle class="prog" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)" stroke="url(#gA)"/>
+        <g class="dot-g"><circle class="dot" cx="60" cy="8" r="3.6"/></g>
+      </svg>
+    </div>
+    <div class="sub">25:00</div>
+  </div>
+
+  <div class="state st-running">
+    <div class="tag">Running</div>
+    <div class="sub">glow breathing ~3s</div>
+    <div class="orb-wrap" data-fraction="0.551">
+      <div class="orb-puck"><div class="orb-time">13:47</div><div class="orb-cap">Session in progress</div></div>
+      <svg class="orb" viewBox="0 0 120 120">
+        <defs>
+          <linearGradient id="gB" x1="0" y1="0" x2="0" y2="1">
+            <stop class="stop-hi" offset="0"/><stop class="stop-mid" offset="0.52"/><stop class="stop-lo" offset="1"/>
+          </linearGradient>
+        </defs>
+        <circle class="rim" cx="60" cy="60" r="57.5"/>
+        <circle class="track" cx="60" cy="60" r="52"/>
+        <g class="ticks"></g>
+        <circle class="pulse" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)"/>
+        <circle class="prog" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)" stroke="url(#gB)"/>
+        <g class="dot-g"><circle class="dot" cx="60" cy="8" r="3.6"/></g>
+      </svg>
+    </div>
+    <div class="sub">13:47 left of 25:00</div>
+  </div>
+
+  <div class="state st-paused">
+    <div class="tag">Paused</div>
+    <div class="sub">dimmer, slower pulse</div>
+    <div class="orb-wrap" data-fraction="0.551">
+      <div class="orb-puck"><div class="orb-time">13:47</div><div class="orb-cap">Paused</div></div>
+      <svg class="orb" viewBox="0 0 120 120">
+        <defs>
+          <linearGradient id="gC" x1="0" y1="0" x2="0" y2="1">
+            <stop class="stop-hi" offset="0"/><stop class="stop-mid" offset="0.52"/><stop class="stop-lo" offset="1"/>
+          </linearGradient>
+        </defs>
+        <circle class="rim" cx="60" cy="60" r="57.5"/>
+        <circle class="track" cx="60" cy="60" r="52"/>
+        <g class="ticks"></g>
+        <circle class="pulse" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)"/>
+        <circle class="prog" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)" stroke="url(#gC)"/>
+        <g class="dot-g"><circle class="dot" cx="60" cy="8" r="3.6"/></g>
+      </svg>
+    </div>
+    <div class="sub">13:47 left of 25:00</div>
+  </div>
+
+  <div class="state st-low">
+    <div class="tag">Last minutes</div>
+    <div class="sub">red gloss + fast pulse</div>
+    <div class="orb-wrap" data-fraction="0.118">
+      <div class="orb-puck"><div class="orb-time">02:57</div><div class="orb-cap">Almost done</div></div>
+      <svg class="orb" viewBox="0 0 120 120">
+        <defs>
+          <linearGradient id="gD" x1="0" y1="0" x2="0" y2="1">
+            <stop class="stop-hi" offset="0"/><stop class="stop-mid" offset="0.52"/><stop class="stop-lo" offset="1"/>
+          </linearGradient>
+        </defs>
+        <circle class="rim" cx="60" cy="60" r="57.5"/>
+        <circle class="track" cx="60" cy="60" r="52"/>
+        <g class="ticks"></g>
+        <circle class="pulse" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)"/>
+        <circle class="prog" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)" stroke="url(#gD)"/>
+        <g class="dot-g"><circle class="dot" cx="60" cy="8" r="3.6"/></g>
+      </svg>
+    </div>
+    <div class="sub">02:57 left of 25:00</div>
+  </div>
+</div>
+
+<h2>Live demo — it ticks</h2>
+<p class="note">Open this file in a browser: press Start, feel the breathing glow, digit blur on each second, and the color shift under 1:00.</p>
+
+<div class="demo-card aero-pane st-idle" id="demoWrap">
+  <div class="orb-wrap" id="demoOrb" data-fraction="1">
+    <div class="orb-puck">
+      <div class="orb-time" id="demoTime">25:00</div>
+      <div class="orb-cap" id="demoCap">Ready to focus</div>
+    </div>
+    <svg class="orb" viewBox="0 0 120 120">
+      <defs>
+        <linearGradient id="gE" x1="0" y1="0" x2="0" y2="1">
+          <stop class="stop-hi" offset="0"/><stop class="stop-mid" offset="0.52"/><stop class="stop-lo" offset="1"/>
+        </linearGradient>
+      </defs>
+      <circle class="rim" cx="60" cy="60" r="57.5"/>
+      <circle class="track" cx="60" cy="60" r="52"/>
+      <g class="ticks"></g>
+      <circle class="pulse" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)"/>
+      <circle class="prog" id="demoProg" cx="60" cy="60" r="52" pathLength="100" transform="rotate(-90 60 60)" stroke="url(#gE)"/>
+      <g class="dot-g" id="demoDot"><circle class="dot" cx="60" cy="8" r="3.6"/></g>
+    </svg>
+  </div>
+  <div class="timer-presets">
+    <button class="aero-btn glass" data-min="10">10</button>
+    <button class="aero-btn glass" data-min="15">15</button>
+    <button class="aero-btn glass selected" data-min="25">25</button>
+    <button class="aero-btn glass" data-min="45">45</button>
+  </div>
+  <div class="timer-actions">
+    <button class="aero-btn primary" id="demoStart">Start</button>
+    <button class="aero-btn glass" id="demoPause" disabled>Pause</button>
+    <button class="aero-btn glass" id="demoStop" disabled>Stop</button>
+  </div>
+</div>
+
+<div class="demo-side">
+  <div class="demo-hint">
+    What to look at:<br>
+    • puck glass + gloss dome vs. the flat dark center you have now<br>
+    • gradient stroke (light top → dark bottom) = same vfill recipe as buttons<br>
+    • head dot gives the eye a moving anchor while the arc slowly drains<br>
+    • ticks give texture; every 5th tick is stronger<br>
+    • under 1:00 the whole orb — stroke, glow, caption — promotes to red via --accent
+  </div>
+</div>
+
+<script>
+function fmt(s) {
+  s = Math.max(0, Math.round(s));
+  const m = Math.floor(s / 60), sec = s % 60;
+  return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+}
+function buildTicks(svg) {
+  const g = svg.querySelector('.ticks');
+  if (!g || g.childNodes.length) return;
+  for (let i = 0; i < 60; i++) {
+    const major = i % 5 === 0;
+    const a = (i * 6 - 90) * Math.PI / 180;
+    const r1 = 47, r2 = major ? 44.4 : 45.4;
+    const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l.setAttribute('x1', 60 + r1 * Math.cos(a)); l.setAttribute('y1', 60 + r1 * Math.sin(a));
+    l.setAttribute('x2', 60 + r2 * Math.cos(a)); l.setAttribute('y2', 60 + r2 * Math.sin(a));
+    l.setAttribute('stroke', major ? 'rgba(255,255,255,0.40)' : 'rgba(255,255,255,0.20)');
+    l.setAttribute('stroke-width', major ? 1.3 : 0.9);
+    l.setAttribute('stroke-linecap', 'round');
+    g.appendChild(l);
+  }
+}
+function renderOrb(wrap, fraction) {
+  const svg = wrap.querySelector('svg');
+  buildTicks(svg);
+  const offset = (100 * (1 - fraction)).toFixed(2);
+  svg.querySelectorAll('.prog, .pulse').forEach(c => c.style.strokeDashoffset = offset);
+  const g = svg.querySelector('.dot-g');
+  const show = fraction > 0.01 && fraction < 0.995;
+  g.style.opacity = show ? 1 : 0;
+  if (show) g.setAttribute('transform', 'rotate(' + (-90 + 360 * fraction) + ' 60 60)');
+}
+document.querySelectorAll('.state .orb-wrap, #demoWrap #demoOrb').forEach(w => renderOrb(w, parseFloat(w.dataset.fraction || 0)));
+
+// ---- live demo ----
+const wrap = document.getElementById('demoWrap');
+const orb = document.getElementById('demoOrb');
+const timeEl = document.getElementById('demoTime');
+const capEl = document.getElementById('demoCap');
+const startBtn = document.getElementById('demoStart');
+const pauseBtn = document.getElementById('demoPause');
+const stopBtn = document.getElementById('demoStop');
+let total = 25 * 60, remaining = total, timer = null, paused = false, lastSec = -1;
+
+function setDemoClass(cls, cap) {
+  wrap.classList.remove('st-idle', 'st-running', 'st-paused', 'st-low');
+  wrap.classList.add(cls);
+  capEl.textContent = cap;
+}
+function paint() {
+  renderOrb(orb, remaining / total);
+  const t = fmt(remaining);
+  if (Math.floor(remaining) !== lastSec) {
+    lastSec = Math.floor(remaining);
+    timeEl.textContent = t;
+    timeEl.classList.add('blink');
+    setTimeout(() => timeEl.classList.remove('blink'), 110);
+  }
+  if (remaining <= 60 && wrap.classList.contains('st-running')) setDemoClass('st-low', 'Almost done');
+}
+startBtn.onclick = () => {
+  if (timer) return;
+  paused = false;
+  setDemoClass('st-running', 'Session in progress');
+  timer = setInterval(() => {
+    if (remaining <= 0) { stopAll(true); return; }
+    remaining -= 0.1; paint();
+  }, 100);
+  startBtn.disabled = true; pauseBtn.disabled = false; stopBtn.disabled = false;
+  document.querySelectorAll('.timer-presets button').forEach(b => b.disabled = true);
+};
+pauseBtn.onclick = () => {
+  if (!timer) return;
+  clearInterval(timer); timer = null; paused = true;
+  setDemoClass('st-paused', 'Paused');
+  startBtn.textContent = 'Resume'; startBtn.disabled = false; pauseBtn.disabled = true;
+};
+function stopAll(done) {
+  clearInterval(timer); timer = null; paused = false;
+  remaining = total; lastSec = -1;
+  timeEl.textContent = fmt(total);
+  setDemoClass('st-idle', 'Ready to focus');
+  renderOrb(orb, 1);
+  startBtn.textContent = 'Start'; startBtn.disabled = false; pauseBtn.disabled = true; stopBtn.disabled = true;
+  document.querySelectorAll('.timer-presets button').forEach(b => { b.disabled = false; });
+}
+stopBtn.onclick = () => stopAll(false);
+document.querySelectorAll('.timer-presets button').forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll('.timer-presets button').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected');
+    total = parseInt(b.dataset.min) * 60; remaining = total; lastSec = -1;
+    timeEl.textContent = fmt(total);
+    setDemoClass('st-idle', 'Ready to focus');
+    renderOrb(orb, 1);
+  };
+});
+</script>
+</body>
+</html>

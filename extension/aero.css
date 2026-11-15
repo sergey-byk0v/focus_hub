@@ -397,3 +397,80 @@ body.aero .tab-bar {
   background: linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0.02) 85%, transparent);
   pointer-events: none;
 }
+
+/* ============================================================
+   Timer track: Gravity Defied-style course canvas (replaces the
+   progress ring). Course/dot/rider are drawn in JS (popup.js);
+   colors are read from --accent at draw time (st-low re-points it
+   to --danger). CSS here is layout + glass pane + state dimming.
+   Structure: .aero-track > .track-head (time + pct) + canvas.
+   ============================================================ */
+.aero-track {
+  position: relative;
+  box-sizing: border-box;
+  width: 232px;
+  padding: 8px 10px 6px;
+  border-radius: var(--radius-card, 8px);
+  background: linear-gradient(180deg,
+    var(--glass-fill-a, rgba(255, 255, 255, 0.11)),
+    var(--glass-fill-b, rgba(255, 255, 255, 0.035)) 55%,
+    var(--glass-fill-c, rgba(255, 255, 255, 0.07)));
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen, rgba(255, 255, 255, 0.26)),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.30),
+    0 3px 10px rgba(0, 0, 0, 0.45);
+}
+.track-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+.track-time {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  line-height: 1.15;
+  color: var(--text, #e9ebe9);
+  font-variant-numeric: tabular-nums;
+}
+.track-pct {
+  font-size: 10px;
+  color: var(--text-secondary, #b7bcbc);
+  font-variant-numeric: tabular-nums;
+}
+.aero-track canvas { display: block; width: 100%; height: 64px; }
+
+/* Transport footer: wide accent pill + glass stop square. The gloss
+   itself comes from .aero-btn/.aero-btn.glass; because the buttons sit
+   inside .aero-track, .st-low re-points --accent and the pill flips
+   red near expiry with no extra rules. */
+.track-ctl { display: flex; gap: 6px; margin-top: 6px; }
+.track-play {
+  flex: 1;
+  height: 30px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.track-stop {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--danger, #ff4757);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.track-play svg, .track-stop svg { width: 9px; height: 9px; flex: none; }
+
+/* States: idle dim / paused softened; low re-points --accent to
+   --danger, which the canvas picks up on its next draw */
+.aero-track.st-idle canvas { opacity: 0.35; }
+.aero-track.st-idle .track-pct { visibility: hidden; }
+.aero-track.st-paused canvas { opacity: 0.72; }
+.aero-track.st-low { --accent: var(--danger, #ff4757); }
